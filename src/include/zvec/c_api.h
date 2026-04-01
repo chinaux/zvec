@@ -2642,14 +2642,14 @@ ZVEC_EXPORT ZVecErrorCode ZVEC_CALL zvec_collection_query(
  * @param query Grouped query parameters pointer
  * @param[out] results Returned document array (needs to be freed by calling
  * zvec_docs_free)
- * @param[out] group_by_values Returned group by field values array (needs to be
- * freed by calling zvec_string_array_destroy)
+ * @param[out] group_values Returned group by field values array (needs to be freed
+ *             by calling zvec_string_array_destroy)
  * @param[out] result_count Number of returned results
  * @return ZVecErrorCode Error code
  */
 ZVEC_EXPORT ZVecErrorCode ZVEC_CALL zvec_collection_query_by_group(
     const ZVecCollection *collection, const ZVecGroupByVectorQuery *query,
-    ZVecDoc ***results, ZVecString ***group_by_values, size_t *result_count);
+    ZVecDoc ***results, ZVecStringArray **group_values, size_t *result_count);
 
 /**
  * @brief Fetch documents by primary keys

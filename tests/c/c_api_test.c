@@ -4697,20 +4697,46 @@ void test_collection_query_functions(void) {
     zvec_group_by_vector_query_set_output_fields(group_query, output_fields, 1);
 
     ZVecDoc **group_results = NULL;
-    ZVecString **group_values = NULL;
+    ZVecStringArray *group_values = NULL;
     size_t group_result_count = 0;
     err =
         zvec_collection_query_by_group(collection, group_query, &group_results,
                                        &group_values, &group_result_count);
     TEST_ASSERT(err == ZVEC_OK);
+    TEST_ASSERT(group_result_count == 2);
+    TEST_ASSERT(group_values != NULL);
+    //TEST_ASSERT(strcmp(zvec_string_c_str(&group_values->strings[0]), "document1") == 0);
+    //TEST_ASSERT(strcmp(zvec_string_c_str(&group_values->strings[1]), "document2") == 0);
+    
+    TEST_ASSERT(group_results != NULL);
+    TEST_ASSERT(group_results[0] != NULL);
+    TEST_ASSERT(group_results[1] != NULL);
+    TEST_ASSERT(zvec_doc_has_field(group_results[0], "name") == true);
+    TEST_ASSERT(zvec_doc_has_field(group_results[1], "name") == true);
+
+    const void *string_ptr;
+    size_t string_ptr_size;
+    err = zvec_doc_get_field_value_pointer(group_results[0], "name",
+                                         ZVEC_DATA_TYPE_STRING, &string_ptr,
+                                         &string_ptr_size);
+    TEST_ASSERT(err == ZVEC_OK);
+    TEST_ASSERT(string_ptr != NULL);
+    TEST_ASSERT(string_ptr_size == 9);
+    TEST_ASSERT(strcmp((const char *)string_ptr, "document1") == 0);
+
+    err = zvec_doc_get_field_value_pointer(group_results[1], "name",                                         ZVEC_DATA_TYPE_STRING, &string_ptr,
+                                         &string_ptr_size);
+
+    TEST_ASSERT(err == ZVEC_OK);
+    TEST_ASSERT(string_ptr != NULL);
+    TEST_ASSERT(string_ptr_size == 9);
+    TEST_ASSERT(strcmp((const char *)string_ptr, "document2") == 0);
+
     if (group_results) {
       zvec_docs_free(group_results, group_result_count);
     }
     if (group_values) {
-      for (size_t i = 0; i < group_result_count; i++) {
-        zvec_free_string(group_values[i]);
-      }
-      zvec_free(group_values);
+      zvec_string_array_destroy(group_values);
     }
 
     zvec_group_by_vector_query_destroy(group_query);
