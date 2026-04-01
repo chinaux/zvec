@@ -5930,82 +5930,6 @@ ZVecErrorCode convert_document_results(
   return ZVEC_OK;
 }
 
-// Helper function to convert grouped document results to C API format
-ZVecErrorCode convert_grouped_document_results(
-    const std::vector<zvec::GroupResult> &group_results, ZVecDoc ***results,
-    ZVecStringArray **group_values, size_t *result_count) {
-  // Calculate total document count across all groups
-  size_t total_docs = 0;
-  for (const auto &group_result : group_results) {
-    total_docs += group_result.docs_.size();
-  }
-
-  // Allocate memory for document pointers
-  *result_count = total_docs;
-  *results =
-      static_cast<ZVecDoc **>(malloc(*result_count * sizeof(ZVecDoc *)));
-  
-  // Create ZVecStringArray for group by values
-  *group_values = zvec_string_array_create(total_docs);
-
-  if (!*results || !*group_values) {
-    set_last_error("Failed to allocate memory for query results");
-    if (*results) {
-      free(*results);
-      *results = nullptr;
-    }
-    if (*group_values) {
-      zvec_string_array_destroy(*group_values);
-      *group_values = nullptr;
-    }
-    *result_count = 0;
-    return ZVEC_ERROR_INTERNAL_ERROR;
-  }
-
-  // Helper lambda to clean up allocated resources on error
-  auto cleanup_results = [&](size_t doc_index) {
-    for (size_t j = 0; j < doc_index; ++j) {
-      zvec_doc_destroy((*results)[j]);
-    }
-    free(*results);
-    *results = nullptr;
-    zvec_string_array_destroy(*group_values);
-    *group_values = nullptr;
-    *result_count = 0;
-  };
-
-  // Convert C++ grouped results to C API format
-  size_t doc_index = 0;
-  for (const auto &group_result : group_results) {
-    for (const auto &internal_doc : group_result.docs_) {
-      if (doc_index >= *result_count) {
-        break;
-      }
-
-      // Create new document wrapper
-      ZVecDoc *c_doc = zvec_doc_create();
-      if (!c_doc) {
-        cleanup_results(doc_index);
-        set_last_error("Failed to create document wrapper");
-        return ZVEC_ERROR_INTERNAL_ERROR;
-      }
-
-      // Copy the C++ document to our wrapper
-      auto *doc_ptr = reinterpret_cast<zvec::Doc *>(c_doc);
-      *doc_ptr = internal_doc;  // Copy assignment
-
-      // Set group by value in the array
-      zvec_string_array_add(*group_values, doc_index,
-                           group_result.group_by_value_.c_str());
-
-      (*results)[doc_index] = c_doc;
-      ++doc_index;
-    }
-  }
-
-  return ZVEC_OK;
-}
-
 // Helper function to convert fetched document results to C API format
 static void normalize_nullable_fields_for_fetch(
     const zvec::CollectionSchema &schema, zvec::DocPtrMap &doc_map) {
@@ -6123,44 +6047,6 @@ ZVecErrorCode zvec_collection_query(const ZVecCollection *collection,
             convert_document_results(query_results, results, result_count);
       } else {
         *results = nullptr;
-        *result_count = 0;
-      }
-
-      return error_code;)
-}
-
-ZVecErrorCode zvec_collection_query_by_group(
-    const ZVecCollection *collection, const ZVecGroupByVectorQuery *query,
-    ZVecDoc ***results, ZVecStringArray **group_values, size_t *result_count) {
-  if (!collection || !query || !results || !group_values ||
-      !result_count) {
-    set_last_error(
-        "Invalid arguments: collection, query, results, group_by_values and "
-        "result_count cannot "
-        "be null");
-    return ZVEC_ERROR_INVALID_ARGUMENT;
-  }
-
-  ZVEC_TRY_RETURN_ERROR(
-      "Exception occurred",
-      auto coll_ptr =
-          reinterpret_cast<const std::shared_ptr<zvec::Collection> *>(
-              collection);
-
-      // Cast ZVecGroupByVectorQuery* to zvec::GroupByVectorQuery* directly
-      auto *internal_query =
-          reinterpret_cast<const zvec::GroupByVectorQuery *>(query);
-
-      auto result = (*coll_ptr)->GroupByQuery(*internal_query);
-      ZVecErrorCode error_code = handle_expected_result(result);
-
-      if (error_code == ZVEC_OK) {
-        const auto &group_results = result.value();
-        error_code = convert_grouped_document_results(
-            group_results, results, group_values, result_count);
-      } else {
-        *results = nullptr;
-        *group_values = nullptr;
         *result_count = 0;
       }
 
