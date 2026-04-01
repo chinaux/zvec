@@ -471,7 +471,8 @@ void test_schema_edge_cases(void) {
   char long_name[1024];
   memset(long_name, 'a', 1023);
   long_name[1023] = '\0';
-  zvec_collection_schema_t *long_schema = zvec_collection_schema_create(long_name);
+  zvec_collection_schema_t *long_schema =
+      zvec_collection_schema_create(long_name);
   TEST_ASSERT(long_schema != NULL);
   TEST_ASSERT(zvec_collection_schema_get_name(long_schema) != NULL);
   TEST_ASSERT(strlen(zvec_collection_schema_get_name(long_schema)) == 1023);
@@ -700,7 +701,8 @@ void test_schema_max_doc_count(void) {
   TEST_START();
 
   // Test 1: Setting max doc count to a valid value
-  zvec_collection_schema_t *schema = zvec_collection_schema_create("max_doc_test");
+  zvec_collection_schema_t *schema =
+      zvec_collection_schema_create("max_doc_test");
   TEST_ASSERT(schema != NULL);
 
   zvec_error_code_t err =
@@ -745,7 +747,8 @@ void test_collection_schema_helpers(void) {
   TEST_START();
 
   // Create schema with various field types
-  zvec_collection_schema_t *schema = zvec_collection_schema_create("helper_test");
+  zvec_collection_schema_t *schema =
+      zvec_collection_schema_create("helper_test");
   TEST_ASSERT(schema != NULL);
 
   if (schema) {
@@ -855,7 +858,8 @@ void test_collection_schema_helpers(void) {
 void test_collection_schema_alter_field(void) {
   TEST_START();
 
-  zvec_collection_schema_t *schema = zvec_collection_schema_create("alter_test");
+  zvec_collection_schema_t *schema =
+      zvec_collection_schema_create("alter_test");
   TEST_ASSERT(schema != NULL);
 
   if (schema) {
@@ -941,8 +945,9 @@ void test_collection_basic_operations(void) {
         // Test update operation
         zvec_doc_set_score(doc1, 0.95f);
         zvec_doc_t *update_docs[] = {doc1};
-        err = zvec_collection_update(collection, (const zvec_doc_t **)update_docs,
-                                     1, &success_count, &error_count);
+        err =
+            zvec_collection_update(collection, (const zvec_doc_t **)update_docs,
+                                   1, &success_count, &error_count);
         TEST_ASSERT(err == ZVEC_OK);
         TEST_ASSERT(success_count == 1);
         TEST_ASSERT(error_count == 0);
@@ -950,8 +955,9 @@ void test_collection_basic_operations(void) {
         // Test upsert operation
         zvec_doc_set_pk(doc3, "pk_3_modified");
         zvec_doc_t *upsert_docs[] = {doc3};
-        err = zvec_collection_upsert(collection, (const zvec_doc_t **)upsert_docs,
-                                     1, &success_count, &error_count);
+        err =
+            zvec_collection_upsert(collection, (const zvec_doc_t **)upsert_docs,
+                                   1, &success_count, &error_count);
         TEST_ASSERT(err == ZVEC_OK);
         TEST_ASSERT(success_count == 1);
         TEST_ASSERT(error_count == 0);
@@ -1226,7 +1232,8 @@ void test_field_schema_functions(void) {
   zvec_index_params_destroy(invert_params);
 
   // Test field with HNSW index
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   zvec_index_params_set_metric_type(hnsw_params, ZVEC_METRIC_TYPE_L2);
   zvec_index_params_set_hnsw_params(hnsw_params, 16, 200);
 
@@ -1252,7 +1259,8 @@ void test_field_helper_functions(void) {
   TEST_START();
 
   // Test scalar field helper functions
-  zvec_index_params_t *invert_params = zvec_test_create_default_invert_params(true);
+  zvec_index_params_t *invert_params =
+      zvec_test_create_default_invert_params(true);
   zvec_field_schema_t *scalar_field = zvec_test_create_scalar_field(
       "test_scalar", ZVEC_DATA_TYPE_INT32, true, invert_params);
   TEST_ASSERT(scalar_field != NULL);
@@ -3361,7 +3369,8 @@ void test_index_params(void) {
   }
 
   // Test scalar index parameter creation
-  zvec_index_params_t *invert_params = zvec_test_create_default_invert_params(true);
+  zvec_index_params_t *invert_params =
+      zvec_test_create_default_invert_params(true);
   TEST_ASSERT(invert_params != NULL);
   if (invert_params) {
     zvec_free(invert_params);
@@ -3426,7 +3435,8 @@ void test_index_params_functions(void) {
 
   // Test index params with new opaque pointer API
   // Test HNSW params
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   TEST_ASSERT(hnsw_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(hnsw_params) == ZVEC_INDEX_TYPE_HNSW);
   // Default metric type is L2, need to set it explicitly
@@ -3454,7 +3464,8 @@ void test_index_params_functions(void) {
   TEST_ASSERT(enable_wildcard == false);  // Default is false
 
   // Test flat index params
-  zvec_index_params_t *flat_params = zvec_index_params_create(ZVEC_INDEX_TYPE_FLAT);
+  zvec_index_params_t *flat_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_FLAT);
   TEST_ASSERT(flat_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(flat_params) == ZVEC_INDEX_TYPE_FLAT);
   // Default metric type is L2, need to set it explicitly
@@ -3463,7 +3474,8 @@ void test_index_params_functions(void) {
               ZVEC_METRIC_TYPE_IP);
 
   // Test IVF index params
-  zvec_index_params_t *ivf_params = zvec_index_params_create(ZVEC_INDEX_TYPE_IVF);
+  zvec_index_params_t *ivf_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_IVF);
   TEST_ASSERT(ivf_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(ivf_params) == ZVEC_INDEX_TYPE_IVF);
   // Default metric type is L2
@@ -3490,7 +3502,8 @@ void test_index_params_api_functions(void) {
   TEST_START();
 
   // Test zvec_index_params_create for HNSW
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   TEST_ASSERT(hnsw_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(hnsw_params) == ZVEC_INDEX_TYPE_HNSW);
   TEST_ASSERT(zvec_index_params_get_metric_type(hnsw_params) ==
@@ -3510,7 +3523,8 @@ void test_index_params_api_functions(void) {
   TEST_ASSERT(ef_construction == 300);
 
   // Test zvec_index_params_create for IVF
-  zvec_index_params_t *ivf_params = zvec_index_params_create(ZVEC_INDEX_TYPE_IVF);
+  zvec_index_params_t *ivf_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_IVF);
   TEST_ASSERT(ivf_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(ivf_params) == ZVEC_INDEX_TYPE_IVF);
   TEST_ASSERT(zvec_index_params_get_metric_type(ivf_params) ==
@@ -3541,7 +3555,8 @@ void test_index_params_api_functions(void) {
   TEST_ASSERT(enable_wildcard == true);
 
   // Test zvec_index_params_create for FLAT
-  zvec_index_params_t *flat_params = zvec_index_params_create(ZVEC_INDEX_TYPE_FLAT);
+  zvec_index_params_t *flat_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_FLAT);
   TEST_ASSERT(flat_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(flat_params) == ZVEC_INDEX_TYPE_FLAT);
   zvec_index_params_set_metric_type(flat_params, ZVEC_METRIC_TYPE_IP);
@@ -3611,11 +3626,13 @@ void test_query_params_functions(void) {
   TEST_ASSERT(hnsw_params != NULL);
 
   // Test IVF query parameters
-  zvec_ivf_query_params_t *ivf_params = zvec_query_params_ivf_create(10, true, 1.5f);
+  zvec_ivf_query_params_t *ivf_params =
+      zvec_query_params_ivf_create(10, true, 1.5f);
   TEST_ASSERT(ivf_params != NULL);
 
   // Test Flat query parameters
-  zvec_flat_query_params_t *flat_params = zvec_query_params_flat_create(false, 2.0f);
+  zvec_flat_query_params_t *flat_params =
+      zvec_query_params_flat_create(false, 2.0f);
   TEST_ASSERT(flat_params != NULL);
 
   zvec_error_code_t err;
@@ -3795,13 +3812,13 @@ void test_collection_dml_functions(void) {
 
       // Test zero document count
       zvec_doc_t *empty_docs[1];
-      err = zvec_collection_insert(collection, (const zvec_doc_t **)empty_docs, 0,
-                                   &success_count, &error_count);
+      err = zvec_collection_insert(collection, (const zvec_doc_t **)empty_docs,
+                                   0, &success_count, &error_count);
       TEST_ASSERT(err != ZVEC_OK);
 
       // Test NULL count pointer
-      err = zvec_collection_insert(collection, (const zvec_doc_t **)empty_docs, 1,
-                                   NULL, &error_count);
+      err = zvec_collection_insert(collection, (const zvec_doc_t **)empty_docs,
+                                   1, NULL, &error_count);
       TEST_ASSERT(err != ZVEC_OK);
 
       // Test update function boundary cases
@@ -3812,8 +3829,8 @@ void test_collection_dml_functions(void) {
                                    &error_count);
       TEST_ASSERT(err != ZVEC_OK);
 
-      err = zvec_collection_update(collection, (const zvec_doc_t **)empty_docs, 0,
-                                   NULL, &error_count);
+      err = zvec_collection_update(collection, (const zvec_doc_t **)empty_docs,
+                                   0, NULL, &error_count);
       TEST_ASSERT(err != ZVEC_OK);
 
       // Test upsert function boundary cases
@@ -3824,8 +3841,8 @@ void test_collection_dml_functions(void) {
                                    &error_count);
       TEST_ASSERT(err != ZVEC_OK);
 
-      err = zvec_collection_upsert(collection, (const zvec_doc_t **)empty_docs, 0,
-                                   NULL, &error_count);
+      err = zvec_collection_upsert(collection, (const zvec_doc_t **)empty_docs,
+                                   0, NULL, &error_count);
       TEST_ASSERT(err != ZVEC_OK);
 
       // Test deletion function boundary cases
@@ -3855,9 +3872,9 @@ void test_collection_dml_functions(void) {
         zvec_write_result_t *results = NULL;
         size_t result_count = 0;
 
-        err = zvec_collection_upsert_with_results(collection,
-                                                  (const zvec_doc_t **)result_docs,
-                                                  1, &results, &result_count);
+        err = zvec_collection_upsert_with_results(
+            collection, (const zvec_doc_t **)result_docs, 1, &results,
+            &result_count);
         TEST_ASSERT(err == ZVEC_OK);
         TEST_ASSERT(result_count == 1);
         if (results && result_count == 1) {
@@ -3996,7 +4013,8 @@ void test_actual_vector_queries(void) {
   char temp_dir[] = "/tmp/zvec_test_actual_queries";
 
   // Create schema with vector field
-  zvec_collection_schema_t *schema = zvec_collection_schema_create("query_test");
+  zvec_collection_schema_t *schema =
+      zvec_collection_schema_create("query_test");
   TEST_ASSERT(schema != NULL);
 
   if (schema) {
@@ -4262,12 +4280,14 @@ void test_field_ddl_operations(void) {
   TEST_ASSERT(zvec_field_schema_get_dimension(field2) == 128);
 
   // Test index parameter setting
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   TEST_ASSERT(hnsw_params != NULL);
   zvec_index_params_set_metric_type(hnsw_params, ZVEC_METRIC_TYPE_L2);
   zvec_index_params_set_hnsw_params(hnsw_params, 16, 100);
 
-  zvec_error_code_t err = zvec_field_schema_set_index_params(field2, hnsw_params);
+  zvec_error_code_t err =
+      zvec_field_schema_set_index_params(field2, hnsw_params);
   TEST_ASSERT(err == ZVEC_OK);
 
   // Cleanup
@@ -4354,9 +4374,9 @@ void test_performance_benchmarks(void) {
 
         // Insert batch
         size_t success_count, error_count;
-        err = zvec_collection_insert(collection, (const zvec_doc_t **)batch_docs,
-                                     current_batch_size, &success_count,
-                                     &error_count);
+        err = zvec_collection_insert(
+            collection, (const zvec_doc_t **)batch_docs, current_batch_size,
+            &success_count, &error_count);
         TEST_ASSERT(err == ZVEC_OK);
         TEST_ASSERT(success_count == current_batch_size);
         TEST_ASSERT(error_count == 0);
@@ -4468,7 +4488,8 @@ void test_index_params_creation_functions(void) {
   TEST_START();
 
   // Test HNSW parameters using new API
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   TEST_ASSERT(hnsw_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(hnsw_params) == ZVEC_INDEX_TYPE_HNSW);
   // Default metric type is L2
@@ -4484,7 +4505,8 @@ void test_index_params_creation_functions(void) {
   TEST_ASSERT(ef_construction == 100);
 
   // Test IVF parameters using new API
-  zvec_index_params_t *ivf_params = zvec_index_params_create(ZVEC_INDEX_TYPE_IVF);
+  zvec_index_params_t *ivf_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_IVF);
   TEST_ASSERT(ivf_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(ivf_params) == ZVEC_INDEX_TYPE_IVF);
   TEST_ASSERT(zvec_index_params_get_metric_type(ivf_params) ==
@@ -4499,7 +4521,8 @@ void test_index_params_creation_functions(void) {
   TEST_ASSERT(use_soar == true);
 
   // Test Flat parameters using new API
-  zvec_index_params_t *flat_params = zvec_index_params_create(ZVEC_INDEX_TYPE_FLAT);
+  zvec_index_params_t *flat_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_FLAT);
   TEST_ASSERT(flat_params != NULL);
   TEST_ASSERT(zvec_index_params_get_type(flat_params) == ZVEC_INDEX_TYPE_FLAT);
   zvec_index_params_set_metric_type(flat_params, ZVEC_METRIC_TYPE_IP);
@@ -4624,8 +4647,10 @@ void test_collection_query_functions(void) {
   zvec_test_delete_dir(temp_dir);
 
   // Create schema and collection
-  zvec_collection_schema_t *schema = zvec_collection_schema_create("query_test");
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_collection_schema_t *schema =
+      zvec_collection_schema_create("query_test");
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   TEST_ASSERT(hnsw_params != NULL);
   zvec_index_params_set_metric_type(hnsw_params, ZVEC_METRIC_TYPE_L2);
   zvec_index_params_set_hnsw_params(hnsw_params, 16, 100);
@@ -4755,7 +4780,8 @@ void test_doc_advanced_functions(void) {
   zvec_doc_destroy(doc2);
 
   // Test zvec_doc_validate
-  zvec_collection_schema_t *schema = zvec_collection_schema_create("validate_test");
+  zvec_collection_schema_t *schema =
+      zvec_collection_schema_create("validate_test");
   zvec_field_schema_t *val_field =
       zvec_field_schema_create("test_field", ZVEC_DATA_TYPE_INT32, false, 0);
   zvec_collection_schema_add_field(schema, val_field);

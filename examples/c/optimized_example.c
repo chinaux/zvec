@@ -21,7 +21,8 @@
 /**
  * @brief Print error message and return error code
  */
-static zvec_error_code_t handle_error(zvec_error_code_t error, const char *context) {
+static zvec_error_code_t handle_error(zvec_error_code_t error,
+                                      const char *context) {
   if (error != ZVEC_OK) {
     char *error_msg = NULL;
     zvec_get_last_error(&error_msg);
@@ -70,7 +71,8 @@ int main() {
   printf("✓ Collection schema created\n");
 
   // 2. Create optimized index parameters
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   if (!hnsw_params) {
     fprintf(stderr, "Failed to create HNSW index parameters\n");
     zvec_collection_schema_destroy(schema);
@@ -253,8 +255,9 @@ int main() {
     zvec_doc_t **results = NULL;
     size_t result_count = 0;
 
-    error = zvec_collection_query(collection, (const zvec_vector_query_t *)query,
-                                  &results, &result_count);
+    error =
+        zvec_collection_query(collection, (const zvec_vector_query_t *)query,
+                              &results, &result_count);
     if (error != ZVEC_OK) {
       char *error_msg = NULL;
       zvec_get_last_error(&error_msg);

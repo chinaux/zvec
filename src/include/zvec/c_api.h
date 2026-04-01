@@ -123,11 +123,11 @@ typedef enum {
  * @brief Error details structure
  */
 typedef struct {
-  zvec_error_code_t code;   /**< Error code */
-  const char *message;  /**< Error message */
-  const char *file;     /**< File where error occurred */
-  int line;             /**< Line number where error occurred */
-  const char *function; /**< Function where error occurred */
+  zvec_error_code_t code; /**< Error code */
+  const char *message;    /**< Error message */
+  const char *file;       /**< File where error occurred */
+  int line;               /**< Line number where error occurred */
+  const char *function;   /**< Function where error occurred */
 } zvec_error_details_t;
 
 /**
@@ -178,7 +178,7 @@ typedef struct {
  */
 typedef struct {
   zvec_string_t *strings; /**< String array */
-  size_t count;        /**< String count */
+  size_t count;           /**< String count */
 } zvec_string_array_t;
 
 /**
@@ -253,7 +253,7 @@ zvec_string_create_from_view(const zvec_string_view_t *view);
  * @note This function is suitable for binary data containing null bytes
  */
 ZVEC_EXPORT zvec_string_t *ZVEC_CALL zvec_bin_create(const uint8_t *data,
-                                                  size_t length);
+                                                     size_t length);
 
 /**
  * @brief Copy string
@@ -306,7 +306,8 @@ ZVEC_EXPORT void ZVEC_CALL zvec_free_string(zvec_string_t *str);
  * @param count Initial number of strings to allocate space for
  * @return Pointer to the newly created string array, or NULL on failure
  */
-ZVEC_EXPORT zvec_string_array_t *ZVEC_CALL zvec_string_array_create(size_t count);
+ZVEC_EXPORT zvec_string_array_t *ZVEC_CALL
+zvec_string_array_create(size_t count);
 
 /**
  * @brief Add a string to the string array at specified index
@@ -321,7 +322,8 @@ ZVEC_EXPORT void ZVEC_CALL zvec_string_array_add(zvec_string_array_t *array,
  * @brief Destroy string array and free all associated memory
  * @param array String array pointer to destroy
  */
-ZVEC_EXPORT void ZVEC_CALL zvec_string_array_destroy(zvec_string_array_t *array);
+ZVEC_EXPORT void ZVEC_CALL
+zvec_string_array_destroy(zvec_string_array_t *array);
 
 /**
  * @brief Create a new mutable byte array
@@ -336,7 +338,8 @@ zvec_byte_array_create(size_t capacity);
  * @brief Destroy byte array and free all associated memory
  * @param array Byte array pointer to destroy
  */
-ZVEC_EXPORT void ZVEC_CALL zvec_byte_array_destroy(zvec_mutable_byte_array_t *array);
+ZVEC_EXPORT void ZVEC_CALL
+zvec_byte_array_destroy(zvec_mutable_byte_array_t *array);
 
 /**
  * @brief Create a new float array
@@ -418,7 +421,10 @@ typedef enum {
 /**
  * @brief Log type enumeration
  */
-typedef enum { ZVEC_LOG_TYPE_CONSOLE = 0, ZVEC_LOG_TYPE_FILE = 1 } zvec_log_type_t;
+typedef enum {
+  ZVEC_LOG_TYPE_CONSOLE = 0,
+  ZVEC_LOG_TYPE_FILE = 1
+} zvec_log_type_t;
 
 // =============================================================================
 // Configuration Structures (Opaque Pointer Pattern)
@@ -652,8 +658,8 @@ zvec_config_data_set_invert_to_forward_scan_ratio(zvec_config_data_t *config,
  * @param config Configuration data pointer
  * @return float Invert to forward scan ratio
  */
-ZVEC_EXPORT float ZVEC_CALL
-zvec_config_data_get_invert_to_forward_scan_ratio(const zvec_config_data_t *config);
+ZVEC_EXPORT float ZVEC_CALL zvec_config_data_get_invert_to_forward_scan_ratio(
+    const zvec_config_data_t *config);
 
 /**
  * @brief Set brute force by keys ratio in configuration data
@@ -670,8 +676,8 @@ zvec_config_data_set_brute_force_by_keys_ratio(zvec_config_data_t *config,
  * @param config Configuration data pointer
  * @return float Brute force by keys ratio
  */
-ZVEC_EXPORT float ZVEC_CALL
-zvec_config_data_get_brute_force_by_keys_ratio(const zvec_config_data_t *config);
+ZVEC_EXPORT float ZVEC_CALL zvec_config_data_get_brute_force_by_keys_ratio(
+    const zvec_config_data_t *config);
 
 /**
  * @brief Set optimize thread count in configuration data
@@ -679,8 +685,9 @@ zvec_config_data_get_brute_force_by_keys_ratio(const zvec_config_data_t *config)
  * @param thread_count Optimize thread count
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_config_data_set_optimize_thread_count(
-    zvec_config_data_t *config, uint32_t thread_count);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_config_data_set_optimize_thread_count(zvec_config_data_t *config,
+                                           uint32_t thread_count);
 
 /**
  * @brief Get optimize thread count from configuration data
@@ -851,7 +858,8 @@ zvec_index_params_create(zvec_index_type_t index_type);
  * @brief Destroy index parameters
  * @param params Index parameters to destroy
  */
-ZVEC_EXPORT void ZVEC_CALL zvec_index_params_destroy(zvec_index_params_t *params);
+ZVEC_EXPORT void ZVEC_CALL
+zvec_index_params_destroy(zvec_index_params_t *params);
 
 // =============================================================================
 // Collection Schema Structures (Opaque Pointer Pattern)
@@ -944,9 +952,9 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_index_params_set_ivf_params(
  * @param out_use_soar Output parameter for use_soar
  * @return ZVEC_OK on success, error code on failure
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_index_params_get_ivf_params(const zvec_index_params_t *params, int *out_n_list,
-                                 int *out_n_iters, bool *out_use_soar);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_index_params_get_ivf_params(
+    const zvec_index_params_t *params, int *out_n_list, int *out_n_iters,
+    bool *out_use_soar);
 
 /**
  * @brief Get invert index parameters (all at once)
@@ -1075,8 +1083,8 @@ zvec_query_params_hnsw_get_ef(const zvec_hnsw_query_params_t *params);
  * @param radius Search radius
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_query_params_hnsw_set_radius(zvec_hnsw_query_params_t *params, float radius);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_hnsw_set_radius(
+    zvec_hnsw_query_params_t *params, float radius);
 
 /**
  * @brief Get search radius (common parameter from QueryParams base)
@@ -1109,16 +1117,17 @@ zvec_query_params_hnsw_get_is_linear(const zvec_hnsw_query_params_t *params);
  * @param is_using_refiner Whether to use refiner
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_hnsw_set_is_using_refiner(
-    zvec_hnsw_query_params_t *params, bool is_using_refiner);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_query_params_hnsw_set_is_using_refiner(zvec_hnsw_query_params_t *params,
+                                            bool is_using_refiner);
 
 /**
  * @brief Get whether to use refiner (common parameter from QueryParams base)
  * @param params HNSW query parameters pointer
  * @return bool Whether to use refiner
  */
-ZVEC_EXPORT bool ZVEC_CALL
-zvec_query_params_hnsw_get_is_using_refiner(const zvec_hnsw_query_params_t *params);
+ZVEC_EXPORT bool ZVEC_CALL zvec_query_params_hnsw_get_is_using_refiner(
+    const zvec_hnsw_query_params_t *params);
 
 // -----------------------------------------------------------------------------
 // zvec_ivf_query_params_t (IVF Query Parameters)
@@ -1129,7 +1138,8 @@ zvec_query_params_hnsw_get_is_using_refiner(const zvec_hnsw_query_params_t *para
  * @param nprobe Number of clusters to probe (default: 10)
  * @param is_using_refiner Whether using refiner (default: false)
  * @param scale_factor Scale factor (default: 10.0)
- * @return zvec_ivf_query_params_t* Pointer to the newly created IVF query parameters
+ * @return zvec_ivf_query_params_t* Pointer to the newly created IVF query
+ * parameters
  */
 ZVEC_EXPORT zvec_ivf_query_params_t *ZVEC_CALL zvec_query_params_ivf_create(
     int nprobe, bool is_using_refiner, float scale_factor);
@@ -1198,8 +1208,8 @@ zvec_query_params_ivf_get_radius(const zvec_ivf_query_params_t *params);
  * @param is_linear Whether linear search
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_query_params_ivf_set_is_linear(zvec_ivf_query_params_t *params, bool is_linear);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_ivf_set_is_linear(
+    zvec_ivf_query_params_t *params, bool is_linear);
 
 /**
  * @brief Get linear search mode (common parameter from QueryParams base)
@@ -1215,16 +1225,17 @@ zvec_query_params_ivf_get_is_linear(const zvec_ivf_query_params_t *params);
  * @param is_using_refiner Whether to use refiner
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_ivf_set_is_using_refiner(
-    zvec_ivf_query_params_t *params, bool is_using_refiner);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_query_params_ivf_set_is_using_refiner(zvec_ivf_query_params_t *params,
+                                           bool is_using_refiner);
 
 /**
  * @brief Get whether to use refiner (common parameter from QueryParams base)
  * @param params IVF query parameters pointer
  * @return bool Whether to use refiner
  */
-ZVEC_EXPORT bool ZVEC_CALL
-zvec_query_params_ivf_get_is_using_refiner(const zvec_ivf_query_params_t *params);
+ZVEC_EXPORT bool ZVEC_CALL zvec_query_params_ivf_get_is_using_refiner(
+    const zvec_ivf_query_params_t *params);
 
 // -----------------------------------------------------------------------------
 // zvec_flat_query_params_t (Flat Query Parameters)
@@ -1270,8 +1281,8 @@ zvec_query_params_flat_get_scale_factor(const zvec_flat_query_params_t *params);
  * @param radius Search radius
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_query_params_flat_set_radius(zvec_flat_query_params_t *params, float radius);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_flat_set_radius(
+    zvec_flat_query_params_t *params, float radius);
 
 /**
  * @brief Get search radius (common parameter from QueryParams base)
@@ -1304,16 +1315,17 @@ zvec_query_params_flat_get_is_linear(const zvec_flat_query_params_t *params);
  * @param is_using_refiner Whether to use refiner
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_flat_set_is_using_refiner(
-    zvec_flat_query_params_t *params, bool is_using_refiner);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_query_params_flat_set_is_using_refiner(zvec_flat_query_params_t *params,
+                                            bool is_using_refiner);
 
 /**
  * @brief Get whether to use refiner (common parameter from QueryParams base)
  * @param params Flat query parameters pointer
  * @return bool Whether to use refiner
  */
-ZVEC_EXPORT bool ZVEC_CALL
-zvec_query_params_flat_get_is_using_refiner(const zvec_flat_query_params_t *params);
+ZVEC_EXPORT bool ZVEC_CALL zvec_query_params_flat_get_is_using_refiner(
+    const zvec_flat_query_params_t *params);
 
 // -----------------------------------------------------------------------------
 // zvec_vector_query_t (Vector Query)
@@ -1329,7 +1341,8 @@ ZVEC_EXPORT zvec_vector_query_t *ZVEC_CALL zvec_vector_query_create(void);
  * @brief Destroy vector query
  * @param query Vector query pointer
  */
-ZVEC_EXPORT void ZVEC_CALL zvec_vector_query_destroy(zvec_vector_query_t *query);
+ZVEC_EXPORT void ZVEC_CALL
+zvec_vector_query_destroy(zvec_vector_query_t *query);
 
 /**
  * @brief Set topk (number of results to return)
@@ -1453,8 +1466,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_vector_query_get_output_fields(
 /**
  * @brief Set query parameters (takes ownership)
  * @param query Vector query pointer
- * @param params Query parameters pointer (type-specific: zvec_hnsw_query_params_t*,
- * etc.)
+ * @param params Query parameters pointer (type-specific:
+ * zvec_hnsw_query_params_t*, etc.)
  * @return zvec_error_code_t Error code
  */
 ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
@@ -1493,8 +1506,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_vector_query_set_flat_params(
 
 /**
  * @brief Create group by vector query
- * @return zvec_group_by_vector_query_t* Pointer to the newly created group by vector
- * query
+ * @return zvec_group_by_vector_query_t* Pointer to the newly created group by
+ * vector query
  */
 ZVEC_EXPORT zvec_group_by_vector_query_t *ZVEC_CALL
 zvec_group_by_vector_query_create(void);
@@ -1512,16 +1525,17 @@ zvec_group_by_vector_query_destroy(zvec_group_by_vector_query_t *query);
  * @param field_name Field name
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_field_name(
-    zvec_group_by_vector_query_t *query, const char *field_name);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_group_by_vector_query_set_field_name(zvec_group_by_vector_query_t *query,
+                                          const char *field_name);
 
 /**
  * @brief Get field name
  * @param query Group by vector query pointer
  * @return const char* Field name (owned by query, do not free)
  */
-ZVEC_EXPORT const char *ZVEC_CALL
-zvec_group_by_vector_query_get_field_name(const zvec_group_by_vector_query_t *query);
+ZVEC_EXPORT const char *ZVEC_CALL zvec_group_by_vector_query_get_field_name(
+    const zvec_group_by_vector_query_t *query);
 
 /**
  * @brief Set group by field name
@@ -1548,16 +1562,17 @@ zvec_group_by_vector_query_get_group_by_field_name(
  * @param count Number of groups
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_group_count(
-    zvec_group_by_vector_query_t *query, uint32_t count);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_group_by_vector_query_set_group_count(zvec_group_by_vector_query_t *query,
+                                           uint32_t count);
 
 /**
  * @brief Get group count
  * @param query Group by vector query pointer
  * @return uint32_t Number of groups
  */
-ZVEC_EXPORT uint32_t ZVEC_CALL
-zvec_group_by_vector_query_get_group_count(const zvec_group_by_vector_query_t *query);
+ZVEC_EXPORT uint32_t ZVEC_CALL zvec_group_by_vector_query_get_group_count(
+    const zvec_group_by_vector_query_t *query);
 
 /**
  * @brief Set group topk
@@ -1565,16 +1580,17 @@ zvec_group_by_vector_query_get_group_count(const zvec_group_by_vector_query_t *q
  * @param topk Number of results per group
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_group_topk(
-    zvec_group_by_vector_query_t *query, uint32_t topk);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_group_by_vector_query_set_group_topk(zvec_group_by_vector_query_t *query,
+                                          uint32_t topk);
 
 /**
  * @brief Get group topk
  * @param query Group by vector query pointer
  * @return uint32_t Number of results per group
  */
-ZVEC_EXPORT uint32_t ZVEC_CALL
-zvec_group_by_vector_query_get_group_topk(const zvec_group_by_vector_query_t *query);
+ZVEC_EXPORT uint32_t ZVEC_CALL zvec_group_by_vector_query_get_group_topk(
+    const zvec_group_by_vector_query_t *query);
 
 /**
  * @brief Set query vector data
@@ -1583,8 +1599,9 @@ zvec_group_by_vector_query_get_group_topk(const zvec_group_by_vector_query_t *qu
  * @param size Data size in bytes
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_query_vector(
-    zvec_group_by_vector_query_t *query, const void *data, size_t size);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_group_by_vector_query_set_query_vector(zvec_group_by_vector_query_t *query,
+                                            const void *data, size_t size);
 
 /**
  * @brief Set filter expression
@@ -1600,8 +1617,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_filter(
  * @param query Group by vector query pointer
  * @return const char* Filter expression (owned by query, do not free)
  */
-ZVEC_EXPORT const char *ZVEC_CALL
-zvec_group_by_vector_query_get_filter(const zvec_group_by_vector_query_t *query);
+ZVEC_EXPORT const char *ZVEC_CALL zvec_group_by_vector_query_get_filter(
+    const zvec_group_by_vector_query_t *query);
 
 /**
  * @brief Set whether to include vector data in results
@@ -1610,8 +1627,8 @@ zvec_group_by_vector_query_get_filter(const zvec_group_by_vector_query_t *query)
  * @return zvec_error_code_t Error code
  */
 ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_group_by_vector_query_set_include_vector(zvec_group_by_vector_query_t *query,
-                                              bool include);
+zvec_group_by_vector_query_set_include_vector(
+    zvec_group_by_vector_query_t *query, bool include);
 
 /**
  * @brief Get whether to include vector data in results
@@ -1629,8 +1646,8 @@ ZVEC_EXPORT bool ZVEC_CALL zvec_group_by_vector_query_get_include_vector(
  * @return zvec_error_code_t Error code
  */
 ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_group_by_vector_query_set_output_fields(zvec_group_by_vector_query_t *query,
-                                             const char **fields, size_t count);
+zvec_group_by_vector_query_set_output_fields(
+    zvec_group_by_vector_query_t *query, const char **fields, size_t count);
 
 /**
  * @brief Get output fields
@@ -1644,9 +1661,8 @@ zvec_group_by_vector_query_set_output_fields(zvec_group_by_vector_query_t *query
  *       are owned by the query and must NOT be freed.
  */
 ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_group_by_vector_query_get_output_fields(zvec_group_by_vector_query_t *query,
-                                             const char ***fields,
-                                             size_t *count);
+zvec_group_by_vector_query_get_output_fields(
+    zvec_group_by_vector_query_t *query, const char ***fields, size_t *count);
 
 /**
  * @brief Set query parameters (takes ownership)
@@ -1654,8 +1670,9 @@ zvec_group_by_vector_query_get_output_fields(zvec_group_by_vector_query_t *query
  * @param params Query parameters pointer
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_query_params(
-    zvec_group_by_vector_query_t *query, void *params);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_group_by_vector_query_set_query_params(zvec_group_by_vector_query_t *query,
+                                            void *params);
 
 /**
  * @brief Set HNSW query parameters (takes ownership)
@@ -1663,7 +1680,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_query_par
  * @param hnsw_params HNSW query parameters pointer
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_hnsw_params(
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_group_by_vector_query_set_hnsw_params(
     zvec_group_by_vector_query_t *query, zvec_hnsw_query_params_t *hnsw_params);
 
 /**
@@ -1672,8 +1690,9 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_hnsw_para
  * @param ivf_params IVF query parameters pointer
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_ivf_params(
-    zvec_group_by_vector_query_t *query, zvec_ivf_query_params_t *ivf_params);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_group_by_vector_query_set_ivf_params(zvec_group_by_vector_query_t *query,
+                                          zvec_ivf_query_params_t *ivf_params);
 
 /**
  * @brief Set Flat query parameters (takes ownership)
@@ -1681,7 +1700,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_ivf_param
  * @param flat_params Flat query parameters pointer
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_group_by_vector_query_set_flat_params(
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_group_by_vector_query_set_flat_params(
     zvec_group_by_vector_query_t *query, zvec_flat_query_params_t *flat_params);
 
 // =============================================================================
@@ -1734,8 +1754,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_options_set_enable_mmap(
  * @param options Collection options pointer
  * @return bool Whether mmap is enabled
  */
-ZVEC_EXPORT bool ZVEC_CALL
-zvec_collection_options_get_enable_mmap(const zvec_collection_options_t *options);
+ZVEC_EXPORT bool ZVEC_CALL zvec_collection_options_get_enable_mmap(
+    const zvec_collection_options_t *options);
 
 /**
  * @brief Set maximum buffer size
@@ -1743,8 +1763,9 @@ zvec_collection_options_get_enable_mmap(const zvec_collection_options_t *options
  * @param size Maximum buffer size in bytes
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_options_set_max_buffer_size(
-    zvec_collection_options_t *options, size_t size);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_collection_options_set_max_buffer_size(zvec_collection_options_t *options,
+                                            size_t size);
 
 /**
  * @brief Get maximum buffer size
@@ -1844,7 +1865,8 @@ zvec_field_schema_create(const char *name, zvec_data_type_t data_type,
  * @brief Destroy field schema
  * @param schema Field schema pointer
  */
-ZVEC_EXPORT void ZVEC_CALL zvec_field_schema_destroy(zvec_field_schema_t *schema);
+ZVEC_EXPORT void ZVEC_CALL
+zvec_field_schema_destroy(zvec_field_schema_t *schema);
 
 /**
  * @brief Set field name
@@ -1967,8 +1989,8 @@ zvec_field_schema_get_dimension(const zvec_field_schema_t *schema);
  * @param dimension Dimension value
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_field_schema_set_dimension(zvec_field_schema_t *schema, uint32_t dimension);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_field_schema_set_dimension(
+    zvec_field_schema_t *schema, uint32_t dimension);
 
 /**
  * @brief Get index type of the field
@@ -2034,7 +2056,8 @@ typedef struct zvec_collection_schema_t zvec_collection_schema_t;
 /**
  * @brief Create collection schema
  * @param name Collection name
- * @return zvec_collection_schema_t* Pointer to the newly created collection schema
+ * @return zvec_collection_schema_t* Pointer to the newly created collection
+ * schema
  */
 ZVEC_EXPORT zvec_collection_schema_t *ZVEC_CALL
 zvec_collection_schema_create(const char *name);
@@ -2064,8 +2087,8 @@ zvec_collection_schema_get_name(const zvec_collection_schema_t *schema);
  * @param name New collection name
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_collection_schema_set_name(zvec_collection_schema_t *schema, const char *name);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_schema_set_name(
+    zvec_collection_schema_t *schema, const char *name);
 
 /**
  * @brief Add field to collection schema
@@ -2109,8 +2132,8 @@ ZVEC_EXPORT bool ZVEC_CALL zvec_collection_schema_has_field(
  * @brief Get field by name
  * @param schema Collection schema pointer
  * @param field_name Field name
- * @return zvec_field_schema_t* Field schema pointer (non-owning, do not destroy),
- * NULL if not found
+ * @return zvec_field_schema_t* Field schema pointer (non-owning, do not
+ * destroy), NULL if not found
  */
 ZVEC_EXPORT zvec_field_schema_t *ZVEC_CALL zvec_collection_schema_get_field(
     const zvec_collection_schema_t *schema, const char *field_name);
@@ -2119,21 +2142,23 @@ ZVEC_EXPORT zvec_field_schema_t *ZVEC_CALL zvec_collection_schema_get_field(
  * @brief Get forward (scalar) field by name
  * @param schema Collection schema pointer
  * @param field_name Field name
- * @return zvec_field_schema_t* Field schema pointer (non-owning, do not destroy),
- * NULL if not found or not scalar
+ * @return zvec_field_schema_t* Field schema pointer (non-owning, do not
+ * destroy), NULL if not found or not scalar
  */
-ZVEC_EXPORT zvec_field_schema_t *ZVEC_CALL zvec_collection_schema_get_forward_field(
-    const zvec_collection_schema_t *schema, const char *field_name);
+ZVEC_EXPORT zvec_field_schema_t *ZVEC_CALL
+zvec_collection_schema_get_forward_field(const zvec_collection_schema_t *schema,
+                                         const char *field_name);
 
 /**
  * @brief Get vector field by name
  * @param schema Collection schema pointer
  * @param field_name Field name
- * @return zvec_field_schema_t* Field schema pointer (non-owning, do not destroy),
- * NULL if not found or not vector
+ * @return zvec_field_schema_t* Field schema pointer (non-owning, do not
+ * destroy), NULL if not found or not vector
  */
-ZVEC_EXPORT zvec_field_schema_t *ZVEC_CALL zvec_collection_schema_get_vector_field(
-    const zvec_collection_schema_t *schema, const char *field_name);
+ZVEC_EXPORT zvec_field_schema_t *ZVEC_CALL
+zvec_collection_schema_get_vector_field(const zvec_collection_schema_t *schema,
+                                        const char *field_name);
 
 /**
  * @brief Get all forward (scalar) fields
@@ -2148,7 +2173,8 @@ ZVEC_EXPORT zvec_field_schema_t *ZVEC_CALL zvec_collection_schema_get_vector_fie
  *       using zvec_free() when no longer needed. The individual field pointers
  *       are owned by the schema and must NOT be freed.
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_schema_get_forward_fields(
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_collection_schema_get_forward_fields(
     const zvec_collection_schema_t *schema, zvec_field_schema_t ***fields,
     size_t *count);
 
@@ -2211,7 +2237,8 @@ zvec_collection_schema_get_forward_field_names_with_index(
  *       using zvec_free() when no longer needed. The individual string pointers
  *       are owned by the schema and must NOT be freed.
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_schema_get_all_field_names(
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_collection_schema_get_all_field_names(
     const zvec_collection_schema_t *schema, const char ***names, size_t *count);
 
 /**
@@ -2227,9 +2254,10 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_schema_get_all_field_nam
  *       using zvec_free() when no longer needed. The individual field pointers
  *       are owned by the schema and must NOT be freed.
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_schema_get_vector_fields(
-    const zvec_collection_schema_t *schema, zvec_field_schema_t ***fields,
-    size_t *count);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_collection_schema_get_vector_fields(const zvec_collection_schema_t *schema,
+                                         zvec_field_schema_t ***fields,
+                                         size_t *count);
 
 /**
  * @brief Get maximum document count per segment of collection schema
@@ -2405,9 +2433,9 @@ zvec_free_field_schema(zvec_field_schema_t *field_schema);
  *                     should call zvec_index_params_destroy() after the call.
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_collection_create_index(zvec_collection_t *collection, const char *field_name,
-                             const zvec_index_params_t *index_params);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_create_index(
+    zvec_collection_t *collection, const char *field_name,
+    const zvec_index_params_t *index_params);
 
 /**
  * @brief Drop index
@@ -2415,8 +2443,8 @@ zvec_collection_create_index(zvec_collection_t *collection, const char *field_na
  * @param field_name Field name
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_collection_drop_index(zvec_collection_t *collection, const char *field_name);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_drop_index(
+    zvec_collection_t *collection, const char *field_name);
 
 /**
  * @brief Optimize collection (rebuild indexes, merge segments, etc.)
@@ -2464,8 +2492,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_drop_column(
  * @return zvec_error_code_t Error code
  */
 ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_alter_column(
-    zvec_collection_t *collection, const char *column_name, const char *new_name,
-    const zvec_field_schema_t *new_schema);
+    zvec_collection_t *collection, const char *column_name,
+    const char *new_name, const zvec_field_schema_t *new_schema);
 
 /**
  * @brief Document structure (opaque pointer mode)
@@ -2480,8 +2508,8 @@ typedef struct zvec_doc_t zvec_doc_t;
  *       Caller should access pk by index from the original input array.
  */
 typedef struct {
-  zvec_error_code_t code;  /**< Per-document status code */
-  const char *message; /**< Per-document status message (allocated by API) */
+  zvec_error_code_t code; /**< Per-document status code */
+  const char *message;    /**< Per-document status message (allocated by API) */
 } zvec_write_result_t;
 
 // =============================================================================
@@ -2647,8 +2675,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_query(
  * @return zvec_error_code_t Error code
  */
 ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_fetch(
-    zvec_collection_t *collection, const char *const *primary_keys, size_t count,
-    zvec_doc_t ***documents, size_t *found_count);
+    zvec_collection_t *collection, const char *const *primary_keys,
+    size_t count, zvec_doc_t ***documents, size_t *found_count);
 
 // =============================================================================
 // Document Related Structures
@@ -2674,7 +2702,7 @@ typedef union {
  * @brief Document field structure
  */
 typedef struct {
-  zvec_string_t name;         ///< Field name
+  zvec_string_t name;          ///< Field name
   zvec_data_type_t data_type;  ///< Data type
   zvec_field_value_t value;    ///< Field value
 } zvec_doc_field_t;
@@ -2696,8 +2724,8 @@ typedef enum {
 /**
  * @brief Create a new document object
  *
- * @return zvec_doc_t* Pointer to the newly created document object, returns NULL
- * on failure
+ * @return zvec_doc_t* Pointer to the newly created document object, returns
+ * NULL on failure
  */
 ZVEC_EXPORT zvec_doc_t *ZVEC_CALL zvec_doc_create(void);
 
@@ -2771,7 +2799,8 @@ ZVEC_EXPORT void ZVEC_CALL zvec_doc_set_pk(zvec_doc_t *doc, const char *pk);
  * @param doc Document structure pointer
  * @param doc_id Document ID
  */
-ZVEC_EXPORT void ZVEC_CALL zvec_doc_set_doc_id(zvec_doc_t *doc, uint64_t doc_id);
+ZVEC_EXPORT void ZVEC_CALL zvec_doc_set_doc_id(zvec_doc_t *doc,
+                                               uint64_t doc_id);
 
 /**
  * @brief Set document score
@@ -2822,7 +2851,8 @@ ZVEC_EXPORT float ZVEC_CALL zvec_doc_get_score(const zvec_doc_t *doc);
  * @param doc Document structure pointer
  * @return zvec_doc_operator_t Operator
  */
-ZVEC_EXPORT zvec_doc_operator_t ZVEC_CALL zvec_doc_get_operator(const zvec_doc_t *doc);
+ZVEC_EXPORT zvec_doc_operator_t ZVEC_CALL
+zvec_doc_get_operator(const zvec_doc_t *doc);
 
 /**
  * @brief Get document field count
@@ -2838,7 +2868,8 @@ ZVEC_EXPORT size_t ZVEC_CALL zvec_doc_get_field_count(const zvec_doc_t *doc);
  * @param doc Document object pointer
  * @return const char* Primary key string pointer, returns NULL if not set
  */
-ZVEC_EXPORT const char *ZVEC_CALL zvec_doc_get_pk_pointer(const zvec_doc_t *doc);
+ZVEC_EXPORT const char *ZVEC_CALL
+zvec_doc_get_pk_pointer(const zvec_doc_t *doc);
 
 /**
  * @brief Get document primary key copy (needs manual release)
@@ -2991,9 +3022,8 @@ ZVEC_EXPORT void ZVEC_CALL zvec_free_str_array(char **array, size_t count);
  * @param[out] size Returned data size
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_doc_serialize(const zvec_doc_t *doc,
-                                                       uint8_t **data,
-                                                       size_t *size);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_doc_serialize(const zvec_doc_t *doc, uint8_t **data, size_t *size);
 
 /**
  * @brief Deserialize document
@@ -3004,9 +3034,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_doc_serialize(const zvec_doc_t *doc
  * zvec_doc_destroy to release)
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_doc_deserialize(const uint8_t *data,
-                                                         size_t size,
-                                                         zvec_doc_t **doc);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
+zvec_doc_deserialize(const uint8_t *data, size_t size, zvec_doc_t **doc);
 
 /**
  * @brief Merge two documents
@@ -3014,7 +3043,8 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_doc_deserialize(const uint8_t *data
  * @param doc Target document object pointer
  * @param other Source document object pointer
  */
-ZVEC_EXPORT void ZVEC_CALL zvec_doc_merge(zvec_doc_t *doc, const zvec_doc_t *other);
+ZVEC_EXPORT void ZVEC_CALL zvec_doc_merge(zvec_doc_t *doc,
+                                          const zvec_doc_t *other);
 
 /**
  * @brief Get document memory usage
@@ -3176,7 +3206,7 @@ const char *zvec_metric_type_to_string(zvec_metric_type_t metric_type);
  * zvec_string_t name = ZVEC_STRING("my_collection");
  */
 #define ZVEC_STRING(str)               \
-  (zvec_string_t) {                       \
+  (zvec_string_t) {                    \
     .data = str, .length = strlen(str) \
   }
 
@@ -3188,7 +3218,7 @@ const char *zvec_metric_type_to_string(zvec_metric_type_t metric_type);
  * zvec_string_view_t name = ZVEC_STRING_VIEW("my_collection");
  */
 #define ZVEC_STRING_VIEW(str)          \
-  (zvec_string_view_t) {                   \
+  (zvec_string_view_t) {               \
     .data = str, .length = strlen(str) \
   }
 
@@ -3204,7 +3234,7 @@ const char *zvec_metric_type_to_string(zvec_metric_type_t metric_type);
  * zvec_float_array_t vec_array = ZVEC_FLOAT_ARRAY(vectors, 3);
  */
 #define ZVEC_FLOAT_ARRAY(data_ptr, len) \
-  (zvec_float_array_t) {                    \
+  (zvec_float_array_t) {                \
     .data = data_ptr, .length = len     \
   }
 
@@ -3214,7 +3244,7 @@ const char *zvec_metric_type_to_string(zvec_metric_type_t metric_type);
  * @param len Array length
  */
 #define ZVEC_INT64_ARRAY(data_ptr, len) \
-  (zvec_int64_array_t) {                    \
+  (zvec_int64_array_t) {                \
     .data = data_ptr, .length = len     \
   }
 
@@ -3229,7 +3259,7 @@ const char *zvec_metric_type_to_string(zvec_metric_type_t metric_type);
  *     {.string_value = ZVEC_STRING("doc1")});
  */
 #define ZVEC_DOC_FIELD(name_str, type, value_union)                        \
-  (zvec_doc_field_t) {                                                         \
+  (zvec_doc_field_t) {                                                     \
     .name = ZVEC_STRING(name_str), .data_type = type, .value = value_union \
   }
 

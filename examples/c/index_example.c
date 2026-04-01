@@ -20,7 +20,8 @@
 /**
  * @brief Print error message and return error code
  */
-static zvec_error_code_t handle_error(zvec_error_code_t error, const char *context) {
+static zvec_error_code_t handle_error(zvec_error_code_t error,
+                                      const char *context) {
   if (error != ZVEC_OK) {
     char *error_msg = NULL;
     zvec_get_last_error(&error_msg);
@@ -334,8 +335,9 @@ int main() {
 
   zvec_doc_t **hnsw_results = NULL;
   size_t hnsw_result_count = 0;
-  error = zvec_collection_query(collection, (const zvec_vector_query_t *)hnsw_query,
-                                &hnsw_results, &hnsw_result_count);
+  error =
+      zvec_collection_query(collection, (const zvec_vector_query_t *)hnsw_query,
+                            &hnsw_results, &hnsw_result_count);
   if (error == ZVEC_OK) {
     printf("✓ HNSW query successful - Found %zu results\n", hnsw_result_count);
     zvec_docs_free(hnsw_results, hnsw_result_count);
@@ -358,8 +360,9 @@ int main() {
 
   zvec_doc_t **flat_results = NULL;
   size_t flat_result_count = 0;
-  error = zvec_collection_query(collection, (const zvec_vector_query_t *)flat_query,
-                                &flat_results, &flat_result_count);
+  error =
+      zvec_collection_query(collection, (const zvec_vector_query_t *)flat_query,
+                            &flat_results, &flat_result_count);
   if (error == ZVEC_OK) {
     printf("✓ Flat (exact) query successful - Found %zu results\n",
            flat_result_count);

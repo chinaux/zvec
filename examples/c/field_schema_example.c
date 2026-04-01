@@ -20,7 +20,8 @@
 /**
  * @brief Print error message and return error code
  */
-static zvec_error_code_t handle_error(zvec_error_code_t error, const char *context) {
+static zvec_error_code_t handle_error(zvec_error_code_t error,
+                                      const char *context) {
   if (error != ZVEC_OK) {
     char *error_msg = NULL;
     zvec_get_last_error(&error_msg);
@@ -58,7 +59,8 @@ int main() {
   }
   zvec_index_params_set_invert_params(invert_params, true, false);
 
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   if (!hnsw_params) {
     fprintf(stderr, "Failed to create HNSW index parameters\n");
     zvec_index_params_destroy(invert_params);
@@ -68,7 +70,8 @@ int main() {
   zvec_index_params_set_metric_type(hnsw_params, ZVEC_METRIC_TYPE_COSINE);
   zvec_index_params_set_hnsw_params(hnsw_params, 16, 200);
 
-  zvec_index_params_t *flat_params = zvec_index_params_create(ZVEC_INDEX_TYPE_FLAT);
+  zvec_index_params_t *flat_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_FLAT);
   if (!flat_params) {
     fprintf(stderr, "Failed to create Flat index parameters\n");
     zvec_index_params_destroy(invert_params);

@@ -20,7 +20,8 @@
 /**
  * @brief Print error message and return error code
  */
-static zvec_error_code_t handle_error(zvec_error_code_t error, const char *context) {
+static zvec_error_code_t handle_error(zvec_error_code_t error,
+                                      const char *context) {
   if (error != ZVEC_OK) {
     char *error_msg = NULL;
     zvec_get_last_error(&error_msg);
@@ -54,7 +55,8 @@ static zvec_error_code_t create_simple_test_collection(
   }
   zvec_index_params_set_invert_params(invert_params, true, false);
 
-  zvec_index_params_t *hnsw_params = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw_params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   if (!hnsw_params) {
     zvec_index_params_destroy(invert_params);
     zvec_collection_schema_destroy(schema);

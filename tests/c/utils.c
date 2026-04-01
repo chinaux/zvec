@@ -115,7 +115,8 @@ zvec_collection_schema_t *zvec_test_create_scalar_schema(void) {
 }
 
 zvec_collection_schema_t *zvec_test_create_normal_schema(
-    bool nullable, const char *name, const zvec_index_params_t *scalar_index_params,
+    bool nullable, const char *name,
+    const zvec_index_params_t *scalar_index_params,
     const zvec_index_params_t *vector_index_params, uint64_t max_doc_count) {
   // Create collection schema using C API
   zvec_collection_schema_t *schema =
@@ -125,10 +126,10 @@ zvec_collection_schema_t *zvec_test_create_normal_schema(
   // Create scalar fields (8)
   const char *scalar_names[] = {"int32", "string", "uint32", "bool",
                                 "float", "double", "int64",  "uint64"};
-  zvec_data_type_t scalar_types[] = {ZVEC_DATA_TYPE_INT32,  ZVEC_DATA_TYPE_STRING,
-                                 ZVEC_DATA_TYPE_UINT32, ZVEC_DATA_TYPE_BOOL,
-                                 ZVEC_DATA_TYPE_FLOAT,  ZVEC_DATA_TYPE_DOUBLE,
-                                 ZVEC_DATA_TYPE_INT64,  ZVEC_DATA_TYPE_UINT64};
+  zvec_data_type_t scalar_types[] = {
+      ZVEC_DATA_TYPE_INT32, ZVEC_DATA_TYPE_STRING, ZVEC_DATA_TYPE_UINT32,
+      ZVEC_DATA_TYPE_BOOL,  ZVEC_DATA_TYPE_FLOAT,  ZVEC_DATA_TYPE_DOUBLE,
+      ZVEC_DATA_TYPE_INT64, ZVEC_DATA_TYPE_UINT64};
 
   for (int i = 0; i < 8; i++) {
     zvec_field_schema_t *field =
@@ -251,8 +252,8 @@ uint64_t zvec_test_extract_doc_id(const char *pk) {
 }
 
 zvec_doc_t *zvec_test_create_doc(uint64_t doc_id,
-                              const zvec_collection_schema_t *schema,
-                              const char *pk) {
+                                 const zvec_collection_schema_t *schema,
+                                 const char *pk) {
   if (!schema) return NULL;
   zvec_doc_t *doc = zvec_doc_create();
   if (!doc) return NULL;
@@ -580,8 +581,8 @@ zvec_doc_t *zvec_test_create_doc(uint64_t doc_id,
 }
 
 zvec_doc_t *zvec_test_create_doc_null(uint64_t doc_id,
-                                   const zvec_collection_schema_t *schema,
-                                   const char *pk) {
+                                      const zvec_collection_schema_t *schema,
+                                      const char *pk) {
   // Reuse create_doc function, but only process vector fields
   zvec_doc_t *doc = zvec_doc_create();
   if (!doc) return NULL;
@@ -743,10 +744,9 @@ zvec_doc_t *zvec_test_create_doc_null(uint64_t doc_id,
   return doc;
 }
 
-zvec_doc_t *zvec_test_create_doc_with_fields(uint64_t doc_id,
-                                          const char **field_names,
-                                          const zvec_data_type_t *field_types,
-                                          size_t field_count, const char *pk) {
+zvec_doc_t *zvec_test_create_doc_with_fields(
+    uint64_t doc_id, const char **field_names,
+    const zvec_data_type_t *field_types, size_t field_count, const char *pk) {
   zvec_doc_t *doc = zvec_doc_create();
   if (!doc) return NULL;
 
@@ -826,8 +826,10 @@ zvec_index_params_t *zvec_test_create_default_flat_params(void) {
   return params;
 }
 
-zvec_index_params_t *zvec_test_create_default_invert_params(bool enable_optimize) {
-  zvec_index_params_t *params = zvec_index_params_create(ZVEC_INDEX_TYPE_INVERT);
+zvec_index_params_t *zvec_test_create_default_invert_params(
+    bool enable_optimize) {
+  zvec_index_params_t *params =
+      zvec_index_params_create(ZVEC_INDEX_TYPE_INVERT);
   if (!params) return NULL;
 
   zvec_index_params_set_invert_params(params, enable_optimize, enable_optimize);
@@ -866,8 +868,8 @@ zvec_field_schema_t *zvec_test_create_scalar_field(
 }
 
 zvec_field_schema_t *zvec_test_create_vector_field(
-    const char *name, zvec_data_type_t data_type, uint32_t dimension, bool nullable,
-    const zvec_index_params_t *vector_index_params) {
+    const char *name, zvec_data_type_t data_type, uint32_t dimension,
+    bool nullable, const zvec_index_params_t *vector_index_params) {
   // Use the public API to create the field
   zvec_field_schema_t *field =
       zvec_field_schema_create(name, data_type, nullable, dimension);
