@@ -788,8 +788,7 @@ static void free_write_results_internal(zvec_write_result_t *results,
 
 // Helper function: convert per-doc statuses to C API write result array.
 static zvec_error_code_t build_write_results(
-    const std::vector<zvec::Status> &statuses,
-    const std::vector<std::string> &pks, zvec_write_result_t **results,
+    const std::vector<zvec::Status> &statuses, zvec_write_result_t **results,
     size_t *result_count) {
   if (!results || !result_count) {
     return ZVEC_ERROR_INVALID_ARGUMENT;
@@ -1205,29 +1204,6 @@ bool zvec_collection_options_get_read_only(
   }
   auto *ptr = reinterpret_cast<const zvec::CollectionOptions *>(options);
   return ptr->read_only_;
-}
-
-zvec_error_code_t zvec_collection_options_set_max_doc_count_per_segment(
-    zvec_collection_options_t *options, uint64_t count) {
-  if (!options) {
-    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
-                   "Collection options pointer is null");
-    return ZVEC_ERROR_INVALID_ARGUMENT;
-  }
-  // Note: max_doc_count_per_segment is now part of CollectionSchema, not
-  // CollectionOptions This function is kept for backward compatibility but has
-  // no effect
-  return ZVEC_OK;
-}
-
-uint64_t zvec_collection_options_get_max_doc_count_per_segment(
-    const zvec_collection_options_t *options) {
-  if (!options) {
-    return zvec::MAX_DOC_COUNT_PER_SEGMENT;  // Default
-  }
-  // Note: max_doc_count_per_segment is now part of CollectionSchema, not
-  // CollectionOptions
-  return zvec::MAX_DOC_COUNT_PER_SEGMENT;
 }
 
 // =============================================================================
@@ -5646,7 +5622,7 @@ zvec_error_code_t zvec_collection_insert_with_results(zvec_collection_t *collect
 
       if (error_code != ZVEC_OK) { return error_code; }
 
-      return build_write_results(result.value(), pks, results, result_count);)
+      return build_write_results(result.value(), results, result_count);)
 }
 
 zvec_error_code_t zvec_collection_update(zvec_collection_t *collection,
@@ -5716,7 +5692,7 @@ zvec_error_code_t zvec_collection_update_with_results(zvec_collection_t *collect
 
       if (error_code != ZVEC_OK) { return error_code; }
 
-      return build_write_results(result.value(), pks, results, result_count);)
+      return build_write_results(result.value(), results, result_count);)
 }
 
 zvec_error_code_t zvec_collection_upsert(zvec_collection_t *collection,
@@ -5786,7 +5762,7 @@ zvec_error_code_t zvec_collection_upsert_with_results(zvec_collection_t *collect
 
       if (error_code != ZVEC_OK) { return error_code; }
 
-      return build_write_results(result.value(), pks, results, result_count);)
+      return build_write_results(result.value(), results, result_count);)
 }
 
 zvec_error_code_t zvec_collection_delete(zvec_collection_t *collection,
@@ -5865,7 +5841,7 @@ zvec_error_code_t zvec_collection_delete_with_results(zvec_collection_t *collect
 
       if (error_code != ZVEC_OK) { return error_code; }
 
-      return build_write_results(result.value(), primary_keys, results,
+      return build_write_results(result.value(), results,
                                   result_count);)
 }
 

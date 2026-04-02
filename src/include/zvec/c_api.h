@@ -1792,25 +1792,6 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_options_set_read_only(
 ZVEC_EXPORT bool ZVEC_CALL
 zvec_collection_options_get_read_only(const zvec_collection_options_t *options);
 
-/**
- * @brief Set maximum document count per segment
- * @param options Collection options pointer
- * @param count Maximum document count
- * @return zvec_error_code_t Error code
- */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_collection_options_set_max_doc_count_per_segment(
-    zvec_collection_options_t *options, uint64_t count);
-
-/**
- * @brief Get maximum document count per segment
- * @param options Collection options pointer
- * @return uint64_t Maximum document count per segment
- */
-ZVEC_EXPORT uint64_t ZVEC_CALL
-zvec_collection_options_get_max_doc_count_per_segment(
-    const zvec_collection_options_t *options);
-
 // =============================================================================
 // Collection Statistics Management Functions
 // =============================================================================

@@ -4573,7 +4573,6 @@ void test_collection_advanced_index_functions(void) {
 
     zvec_collection_options_t *options = zvec_collection_options_create();
     TEST_ASSERT(options != NULL);
-    zvec_collection_options_set_max_doc_count_per_segment(options, 1000);
     zvec_collection_t *collection = NULL;
 
     zvec_error_code_t err =
@@ -4930,7 +4929,6 @@ void test_collection_open_close(void) {
   zvec_collection_schema_add_field(schema, vec_field);
 
   zvec_collection_options_t *options = zvec_collection_options_create();
-  zvec_collection_options_set_max_doc_count_per_segment(options, 1000);
 
   zvec_collection_t *collection = NULL;
   zvec_error_code_t err =
@@ -5048,30 +5046,13 @@ void test_collection_options_getters(void) {
   zvec_collection_options_t *options = zvec_collection_options_create();
   TEST_ASSERT(options != NULL);
 
-  // Test max_doc_count_per_segment getter
-  // Note: This function now returns a constant default value
-  // (MAX_DOC_COUNT_PER_SEGMENT) as the actual setting is stored in
-  // CollectionSchema, not CollectionOptions
-  size_t max_doc_count =
-      zvec_collection_options_get_max_doc_count_per_segment(options);
-  TEST_ASSERT(max_doc_count > 0);  // Should have a default value
-
-  // Set call succeeds but doesn't actually change the value (deprecated
-  // behavior)
-  zvec_error_code_t err =
-      zvec_collection_options_set_max_doc_count_per_segment(options, 5000);
-  TEST_ASSERT(err == ZVEC_OK);
-  // Value still returns the constant default
-  max_doc_count =
-      zvec_collection_options_get_max_doc_count_per_segment(options);
-  TEST_ASSERT(max_doc_count > 0);
-
   // Test enable_mmap getter
   bool enable_mmap = zvec_collection_options_get_enable_mmap(options);
   TEST_ASSERT(enable_mmap == true || enable_mmap == false);
 
   // Set and verify
-  err = zvec_collection_options_set_enable_mmap(options, false);
+  zvec_error_code_t err =
+      zvec_collection_options_set_enable_mmap(options, false);
   TEST_ASSERT(err == ZVEC_OK);
   enable_mmap = zvec_collection_options_get_enable_mmap(options);
   TEST_ASSERT(enable_mmap == false);
@@ -5087,7 +5068,6 @@ void test_collection_options_getters(void) {
   TEST_ASSERT(max_buffer_size == 1024 * 1024);
 
   // Test NULL pointer handling - these return defaults, not 0
-  TEST_ASSERT(zvec_collection_options_get_max_doc_count_per_segment(NULL) > 0);
   TEST_ASSERT(zvec_collection_options_get_enable_mmap(NULL) ==
               true);  // Default is true
   TEST_ASSERT(zvec_collection_options_get_max_buffer_size(NULL) >
