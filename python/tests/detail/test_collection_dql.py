@@ -290,10 +290,10 @@ class TestCollectionFetch:
         assert doc_id in fetched_all
         doc_all = fetched_all[doc_id]
         assert doc_all is not None
-        assert hasattr(doc_all, "int32_field"), (
+        assert doc_all.has_field("int32_field"), (
             "int32_field should be present when output_fields=None"
         )
-        assert hasattr(doc_all, "string_field"), (
+        assert doc_all.has_field("string_field"), (
             "string_field should be present when output_fields=None"
         )
 
@@ -304,11 +304,11 @@ class TestCollectionFetch:
         assert doc_id in fetched_partial
         doc_partial = fetched_partial[doc_id]
         assert doc_partial is not None
-        assert hasattr(doc_partial, "int32_field"), "int32_field should be present"
-        assert not hasattr(doc_partial, "string_field"), (
+        assert doc_partial.has_field("int32_field"), "int32_field should be present"
+        assert not doc_partial.has_field("string_field"), (
             'string_field should not be present when output_fields=["int32_field"]'
         )
-        assert not hasattr(doc_partial, "float_field"), (
+        assert not doc_partial.has_field("float_field"), (
             'float_field should not be present when output_fields=["int32_field"]'
         )
 
@@ -318,10 +318,10 @@ class TestCollectionFetch:
         doc_empty = fetched_empty[doc_id]
         assert doc_empty is not None
         assert doc_empty.id == doc_id, "pk should still be set"
-        assert not hasattr(doc_empty, "int32_field"), (
+        assert not doc_empty.has_field("int32_field"), (
             "int32_field should not be present when output_fields=[]"
         )
-        assert not hasattr(doc_empty, "string_field"), (
+        assert not doc_empty.has_field("string_field"), (
             "string_field should not be present when output_fields=[]"
         )
 
@@ -332,9 +332,9 @@ class TestCollectionFetch:
         assert doc_id in fetched_multi
         doc_multi = fetched_multi[doc_id]
         assert doc_multi is not None
-        assert hasattr(doc_multi, "int32_field")
-        assert hasattr(doc_multi, "float_field")
-        assert not hasattr(doc_multi, "string_field")
+        assert doc_multi.has_field("int32_field")
+        assert doc_multi.has_field("float_field")
+        assert not doc_multi.has_field("string_field")
 
 
 class TestCollectionQuery:
