@@ -273,6 +273,69 @@ class TestCollectionFetch:
             f"Expected 0 results for empty ID list, but got {len(result)}"
         )
 
+    @pytest.mark.parametrize("doc_num", [3])
+    def test_fetch_with_output_fields(self, full_collection: Collection, doc_num):
+        """Test that fetch respects output_fields parameter."""
+        multiple_docs = [
+            generate_doc(i, full_collection.schema) for i in range(doc_num)
+        ]
+        result = full_collection.insert(multiple_docs)
+        for item in result:
+            assert item.ok(), f"Insert failed: {item.code()}"
+
+        doc_id = multiple_docs[0].id
+
+        # Case 1: output_fields=None -> all scalar fields returned
+        fetched_all = full_collection.fetch(ids=[doc_id], output_fields=None)
+        assert doc_id in fetched_all
+        doc_all = fetched_all[doc_id]
+        assert doc_all is not None
+        assert doc_all.has_field("int32_field"), (
+            "int32_field should be present when output_fields=None"
+        )
+        assert doc_all.has_field("string_field"), (
+            "string_field should be present when output_fields=None"
+        )
+
+        # Case 2: output_fields=["int32_field"] -> only int32_field returned
+        fetched_partial = full_collection.fetch(
+            ids=[doc_id], output_fields=["int32_field"]
+        )
+        assert doc_id in fetched_partial
+        doc_partial = fetched_partial[doc_id]
+        assert doc_partial is not None
+        assert doc_partial.has_field("int32_field"), "int32_field should be present"
+        assert not doc_partial.has_field("string_field"), (
+            'string_field should not be present when output_fields=["int32_field"]'
+        )
+        assert not doc_partial.has_field("float_field"), (
+            'float_field should not be present when output_fields=["int32_field"]'
+        )
+
+        # Case 3: output_fields=[] (empty) -> no scalar fields returned
+        fetched_empty = full_collection.fetch(ids=[doc_id], output_fields=[])
+        assert doc_id in fetched_empty
+        doc_empty = fetched_empty[doc_id]
+        assert doc_empty is not None
+        assert doc_empty.id == doc_id, "pk should still be set"
+        assert not doc_empty.has_field("int32_field"), (
+            "int32_field should not be present when output_fields=[]"
+        )
+        assert not doc_empty.has_field("string_field"), (
+            "string_field should not be present when output_fields=[]"
+        )
+
+        # Case 4: multiple output_fields
+        fetched_multi = full_collection.fetch(
+            ids=[doc_id], output_fields=["int32_field", "float_field"]
+        )
+        assert doc_id in fetched_multi
+        doc_multi = fetched_multi[doc_id]
+        assert doc_multi is not None
+        assert doc_multi.has_field("int32_field")
+        assert doc_multi.has_field("float_field")
+        assert not doc_multi.has_field("string_field")
+
 
 class TestCollectionQuery:
     @pytest.mark.parametrize("doc_num", [5])
