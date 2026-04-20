@@ -336,17 +336,24 @@ class Collection:
         self._obj.DeleteByFilter(filter)
 
     # ========== Collection DQL-fetch Methods ==========
-    def fetch(self, ids: Union[str, list[str]]) -> dict[str, Doc]:
+    def fetch(
+        self,
+        ids: Union[str, list[str]],
+        *,
+        output_fields: Optional[list[str]] = None,
+    ) -> dict[str, Doc]:
         """Retrieve documents by ID.
 
         Args:
             ids (Union[str, list[str]]): Document IDs to fetch.
+            output_fields (Optional[list[str]], optional): Scalar fields to
+                include. If None, all fields are returned. Defaults to None.
 
         Returns:
             dict[str, Doc]: Mapping from ID to document. Missing IDs are omitted.
         """
         ids = [ids] if isinstance(ids, str) else ids
-        docs = self._obj.Fetch(ids)
+        docs = self._obj.Fetch(ids, output_fields)
         return {
             doc_id: py_doc
             for doc_id, core_doc in docs.items()

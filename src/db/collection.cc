@@ -119,7 +119,9 @@ class CollectionImpl : public Collection {
   Result<GroupResults> GroupByQuery(
       const GroupByVectorQuery &query) const override;
 
-  Result<DocPtrMap> Fetch(const std::vector<std::string> &pks) const override;
+  Result<DocPtrMap> Fetch(const std::vector<std::string> &pks,
+                          const std::optional<std::vector<std::string>>
+                              &output_fields = std::nullopt) const override;
 
  private:
   void prepare_schema();
@@ -1605,7 +1607,8 @@ Result<GroupResults> CollectionImpl::GroupByQuery(
 }
 
 Result<DocPtrMap> CollectionImpl::Fetch(
-    const std::vector<std::string> &pks) const {
+    const std::vector<std::string> &pks,
+    const std::optional<std::vector<std::string>> &output_fields) const {
   std::shared_lock lock(schema_handle_mtx_);
 
   CHECK_DESTROY_RETURN_STATUS_EXPECTED(destroyed_, false);
@@ -1631,7 +1634,7 @@ Result<DocPtrMap> CollectionImpl::Fetch(
       results.insert({pk, nullptr});
       continue;
     }
-    results.insert({pk, segment->Fetch(doc_id)});
+    results.insert({pk, segment->Fetch(doc_id, output_fields)});
   }
 
   return results;

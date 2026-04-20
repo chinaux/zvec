@@ -207,11 +207,13 @@ void ZVecPyCollection::bind_dql_methods(
              return unwrap_expected(result);
            })
       .def("Fetch",
-           [](const Collection &self, const std::vector<std::string> &pks) {
-             const auto result = self.Fetch(pks);
+           [](const Collection &self, const std::vector<std::string> &pks,
+              const std::optional<std::vector<std::string>> &output_fields) {
+             const auto result = self.Fetch(pks, output_fields);
              // return DocPtrMap
              return unwrap_expected(result);
-           });
+           }, py::arg("pks"),
+           py::arg("output_fields") = py::none());
 }
 
 }  // namespace zvec

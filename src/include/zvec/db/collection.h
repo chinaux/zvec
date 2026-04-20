@@ -14,6 +14,7 @@
 #pragma once
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include <zvec/db/doc.h>
@@ -102,7 +103,9 @@ class Collection {
       const GroupByVectorQuery &query) const = 0;
 
   virtual Result<DocPtrMap> Fetch(
-      const std::vector<std::string> &pks) const = 0;
+      const std::vector<std::string> &pks,
+      const std::optional<std::vector<std::string>> &output_fields =
+          std::nullopt) const = 0;
 };
 
 }  // namespace zvec
