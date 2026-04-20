@@ -102,10 +102,9 @@ class Collection {
   virtual Result<GroupResults> GroupByQuery(
       const GroupByVectorQuery &query) const = 0;
 
-  virtual Result<DocPtrMap> Fetch(
-      const std::vector<std::string> &pks,
-      const std::optional<std::vector<std::string>> &output_fields =
-          std::nullopt) const = 0;
+  virtual Result<DocPtrMap> Fetch(const std::vector<std::string> &pks,
+                                  const std::optional<std::vector<std::string>>
+                                      &output_fields = std::nullopt) const = 0;
 };
 
 }  // namespace zvec

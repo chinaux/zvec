@@ -4384,8 +4384,7 @@ TEST_F(CollectionTest, Feature_Fetch_OutputFields) {
 
   // Case 3: output_fields = {} (empty vector) -> no scalar fields returned
   {
-    auto result =
-        collection->Fetch({pk}, std::vector<std::string>{});
+    auto result = collection->Fetch({pk}, std::vector<std::string>{});
     ASSERT_TRUE(result.has_value());
     ASSERT_EQ(result.value().size(), 1);
     auto doc = result.value()[pk];

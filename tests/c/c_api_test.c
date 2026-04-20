@@ -3975,7 +3975,8 @@ void test_collection_nullable_roundtrip(void) {
       const char *pks[] = {"pk_nullable"};
       zvec_doc_t **fetched = NULL;
       size_t fetched_count = 0;
-      err = zvec_collection_fetch(collection, pks, 1, NULL, 0, &fetched, &fetched_count);
+      err = zvec_collection_fetch(collection, pks, 1, NULL, 0, &fetched,
+                                  &fetched_count);
       TEST_ASSERT(err == ZVEC_OK);
       TEST_ASSERT(fetched_count == 1);
       if (fetched && fetched_count == 1) {
@@ -4693,7 +4694,8 @@ void test_collection_query_functions(void) {
     const char *pks[] = {"doc1", "doc2"};
     zvec_doc_t **results = NULL;
     size_t found_count = 0;
-    err = zvec_collection_fetch(collection, pks, 2, NULL, 0, &results, &found_count);
+    err = zvec_collection_fetch(collection, pks, 2, NULL, 0, &results,
+                                &found_count);
     TEST_ASSERT(err == ZVEC_OK);
     TEST_ASSERT(found_count == 2);
     if (results && found_count == 2) {

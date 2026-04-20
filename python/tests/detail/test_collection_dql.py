@@ -304,14 +304,12 @@ class TestCollectionFetch:
         assert doc_id in fetched_partial
         doc_partial = fetched_partial[doc_id]
         assert doc_partial is not None
-        assert hasattr(doc_partial, "int32_field"), (
-            "int32_field should be present"
-        )
+        assert hasattr(doc_partial, "int32_field"), "int32_field should be present"
         assert not hasattr(doc_partial, "string_field"), (
-            "string_field should not be present when output_fields=[\"int32_field\"]"
+            'string_field should not be present when output_fields=["int32_field"]'
         )
         assert not hasattr(doc_partial, "float_field"), (
-            "float_field should not be present when output_fields=[\"int32_field\"]"
+            'float_field should not be present when output_fields=["int32_field"]'
         )
 
         # Case 3: output_fields=[] (empty) -> no scalar fields returned

@@ -135,8 +135,8 @@ class SegmentImpl : public Segment,
   Status Delete(uint64_t g_doc_id) override;
 
   Doc::Ptr Fetch(uint64_t g_doc_id,
-                  const std::optional<std::vector<std::string>> &output_fields =
-                      std::nullopt) override;
+                 const std::optional<std::vector<std::string>> &output_fields =
+                     std::nullopt) override;
 
   CombinedVectorColumnIndexer::Ptr get_combined_vector_indexer(
       const std::string &field_name) const override;
@@ -1045,9 +1045,9 @@ Status SegmentImpl::ConvertVectorDataBufferToDocField(
 }
 
 
-Doc::Ptr SegmentImpl::Fetch(uint64_t g_doc_id,
-                            const std::optional<std::vector<std::string>>
-                                &output_fields) {
+Doc::Ptr SegmentImpl::Fetch(
+    uint64_t g_doc_id,
+    const std::optional<std::vector<std::string>> &output_fields) {
   std::lock_guard lock(seg_mtx_);
 
   if (g_doc_id > segment_meta_->max_doc_id()) {
