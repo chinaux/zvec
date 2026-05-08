@@ -397,6 +397,19 @@ struct GroupByVectorQuery {
   QueryParams::Ptr query_params_;
 };
 
+//! Multi-vector query structure for querying multiple vector fields
+//! with optional re-ranking of combined results.
+class Reranker;  // forward declaration
+
+struct MultiVectorQuery {
+  std::vector<VectorQuery> queries;
+  int topk{10};
+  std::string filter;
+  bool include_vector{false};
+  std::optional<std::vector<std::string>> output_fields;
+  std::shared_ptr<Reranker> reranker{nullptr};
+};
+
 struct GroupResult {
   std::string group_by_value_;
   std::vector<Doc> docs_;

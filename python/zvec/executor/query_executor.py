@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Union, final
 
 import numpy as np
-from _zvec import _Collection
+from _zvec import _Collection, _MultiVectorQuery
 from _zvec.param import _VectorQuery
 
 from ..extension import ReRanker, RrfReRanker, WeightedReRanker
@@ -287,8 +287,39 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
             query._validate()
             field = query.field_name
             if field in seen_fields:
-                raise ValueError(f"Query field name '{field}' appears more than once")
+                raise ValueError(
+                    f"Query field name '{field}' appears more than once"
+                )
             seen_fields.add(field)
+
+    def execute(self, ctx: QueryContext, collection: _Collection) -> list[Doc]:
+        # 1. validate query
+        self._do_validate(ctx)
+        # 2. build query vectors
+        query_vectors = self._do_build(ctx, collection)
+        if not query_vectors:
+            raise ValueError("No query to execute")
+
+        # Fast path: use C++ MultiQuery for multi-vector with C++ reranker
+        if len(query_vectors) > 1 and ctx.reranker is not None:
+            cpp_reranker = ctx.reranker._get_object()
+            if cpp_reranker is not None:
+                mvq = _MultiVectorQuery()
+                mvq.queries = query_vectors
+                mvq.topk = ctx.topk
+                if ctx.filter:
+                    mvq.filter = ctx.filter
+                mvq.include_vector = ctx.include_vector
+                if ctx.output_fields:
+                    mvq.output_fields = ctx.output_fields
+                mvq.reranker = cpp_reranker
+                docs = collection.MultiQuery(mvq)
+                return [convert_to_py_doc(doc, self._schema) for doc in docs]
+
+        # 3. execute query (fallback to Python path)
+        docs = self._do_execute(query_vectors, collection)
+        # 4. merge and rerank result
+        return self._do_merge_rerank_results(ctx, docs)
 
     def _do_execute(
         self, vectors: list[_VectorQuery], collection: _Collection
