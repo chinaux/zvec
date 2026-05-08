@@ -130,9 +130,7 @@ class WeightedReRanker(RerankFunction):
         self._weights = weights or {}
         self._metric = metric
         # Use C++ implementation for performance
-        self._cpp_reranker = _WeightedReRanker(
-            topn, metric, self._weights
-        )
+        self._cpp_reranker = _WeightedReRanker(topn, metric, self._weights)
 
     @property
     def weights(self) -> dict[str, float]:
