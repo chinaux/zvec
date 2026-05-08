@@ -1111,9 +1111,7 @@ class TestCollectionQuery:
     ):
         """Test multi-vector query with Weighted reranker on dense vector."""
         weights = {"dense": 1.0}
-        reranker = WeightedReRanker(
-            topn=10, metric=MetricType.L2, weights=weights
-        )
+        reranker = WeightedReRanker(topn=10, metric=MetricType.L2, weights=weights)
         result = collection_with_multiple_docs.query(
             [
                 VectorQuery(
@@ -1131,9 +1129,7 @@ class TestCollectionQuery:
     ):
         """Test multi-vector query with Weighted reranker on sparse vector."""
         weights = {"sparse": 1.0}
-        reranker = WeightedReRanker(
-            topn=10, metric=MetricType.IP, weights=weights
-        )
+        reranker = WeightedReRanker(topn=10, metric=MetricType.IP, weights=weights)
         result = collection_with_multiple_docs.query(
             [
                 VectorQuery(
@@ -1151,9 +1147,7 @@ class TestCollectionQuery:
     ):
         """Test multi-vector query with Weighted reranker combining dense + sparse."""
         weights = {"dense": 0.7, "sparse": 0.3}
-        reranker = WeightedReRanker(
-            topn=10, metric=MetricType.IP, weights=weights
-        )
+        reranker = WeightedReRanker(topn=10, metric=MetricType.IP, weights=weights)
         result = collection_with_multiple_docs.query(
             [
                 VectorQuery(

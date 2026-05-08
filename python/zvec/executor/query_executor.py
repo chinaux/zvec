@@ -287,9 +287,7 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
             query._validate()
             field = query.field_name
             if field in seen_fields:
-                raise ValueError(
-                    f"Query field name '{field}' appears more than once"
-                )
+                raise ValueError(f"Query field name '{field}' appears more than once")
             seen_fields.add(field)
 
     def execute(self, ctx: QueryContext, collection: _Collection) -> list[Doc]:
