@@ -27,10 +27,15 @@ from zvec import (
     InvertIndexParam,
     LogLevel,
     LogType,
+    MetricType,
     OptimizeOption,
     StatusCode,
     Query,
     VectorSchema,
+)
+from zvec.extension.multi_vector_reranker import (
+    RrfReRanker,
+    WeightedReRanker,
 )
 
 # ==================== Common ====================
@@ -969,70 +974,197 @@ class TestCollectionQuery:
     def test_collection_query_multi_vector_with_same_field(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        with pytest.raises(ValueError):
+        # Multi-vector query on same field without reranker should raise ValueError
+        with pytest.raises(ValueError, match="Reranker is required"):
             collection_with_multiple_docs.query(
                 [
-                    Query(field_name="dense", vector=multiple_docs[0].vector("dense")),
-                    Query(field_name="dense", vector=multiple_docs[0].vector("dense")),
+                    VectorQuery(
+                        field_name="dense", vector=multiple_docs[0].vector("dense")
+                    ),
+                    VectorQuery(
+                        field_name="dense", vector=multiple_docs[1].vector("dense")
+                    ),
                 ]
             )
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
+        # Same field name with reranker should also raise ValueError
+        reranker = RrfReRanker(topn=10, rank_constant=60)
+        with pytest.raises(ValueError, match="appears more than once"):
+            collection_with_multiple_docs.query(
+                [
+                    VectorQuery(
+                        field_name="dense", vector=multiple_docs[0].vector("dense")
+                    ),
+                    VectorQuery(
+                        field_name="dense", vector=multiple_docs[1].vector("dense")
+                    ),
+                ],
+                topk=10,
+                reranker=reranker,
+            )
+
     def test_collection_query_by_dense_vector(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        result = collection_with_multiple_docs.query(
+            VectorQuery(field_name="dense", vector=multiple_docs[0].vector("dense")),
+            topk=10,
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_by_sparse_vector(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        result = collection_with_multiple_docs.query(
+            VectorQuery(field_name="sparse", vector=multiple_docs[0].vector("sparse")),
+            topk=10,
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_by_dense_vector_with_filter(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        result = collection_with_multiple_docs.query(
+            VectorQuery(field_name="dense", vector=multiple_docs[0].vector("dense")),
+            topk=10,
+            filter="id > 50",
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
+        for doc in result:
+            assert int(doc.id) > 50
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_by_sparse_vector_with_filter(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        result = collection_with_multiple_docs.query(
+            VectorQuery(field_name="sparse", vector=multiple_docs[0].vector("sparse")),
+            topk=10,
+            filter="id > 50",
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
+        for doc in result:
+            assert int(doc.id) > 50
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_with_rrf_reranker_by_multi_dense_vector(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        """Test multi-vector query with RRF reranker on dense vector."""
+        reranker = RrfReRanker(topn=10, rank_constant=60)
+        result = collection_with_multiple_docs.query(
+            [
+                VectorQuery(
+                    field_name="dense", vector=multiple_docs[0].vector("dense")
+                ),
+            ],
+            topk=10,
+            reranker=reranker,
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
+        # Results should have RRF-fused scores
+        for doc in result:
+            assert hasattr(doc, "score")
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_with_rrf_reranker_by_multi_sparse_vector(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        """Test multi-vector query with RRF reranker on sparse vector."""
+        reranker = RrfReRanker(topn=10, rank_constant=60)
+        result = collection_with_multiple_docs.query(
+            [
+                VectorQuery(
+                    field_name="sparse", vector=multiple_docs[0].vector("sparse")
+                ),
+            ],
+            topk=10,
+            reranker=reranker,
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_with_rrf_reranker_by_hybrid_vector(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        """Test multi-vector query with RRF reranker combining dense + sparse."""
+        reranker = RrfReRanker(topn=10, rank_constant=60)
+        result = collection_with_multiple_docs.query(
+            [
+                VectorQuery(
+                    field_name="dense", vector=multiple_docs[0].vector("dense")
+                ),
+                VectorQuery(
+                    field_name="sparse", vector=multiple_docs[0].vector("sparse")
+                ),
+            ],
+            topk=10,
+            reranker=reranker,
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_with_weighted_reranker_by_multi_dense_vector(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        """Test multi-vector query with Weighted reranker on dense vector."""
+        weights = {"dense": 1.0}
+        reranker = WeightedReRanker(
+            topn=10, metric=MetricType.L2, weights=weights
+        )
+        result = collection_with_multiple_docs.query(
+            [
+                VectorQuery(
+                    field_name="dense", vector=multiple_docs[0].vector("dense")
+                ),
+            ],
+            topk=10,
+            reranker=reranker,
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_with_weighted_reranker_by_multi_sparse_vector(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        """Test multi-vector query with Weighted reranker on sparse vector."""
+        weights = {"sparse": 1.0}
+        reranker = WeightedReRanker(
+            topn=10, metric=MetricType.IP, weights=weights
+        )
+        result = collection_with_multiple_docs.query(
+            [
+                VectorQuery(
+                    field_name="sparse", vector=multiple_docs[0].vector("sparse")
+                ),
+            ],
+            topk=10,
+            reranker=reranker,
+        )
+        assert len(result) > 0
+        assert len(result) <= 10
 
-    @pytest.mark.skip(reason="TODO: This test case is pending implementation")
     def test_collection_query_with_weighted_reranker_by_hybrid_vector(
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
-        pass
+        """Test multi-vector query with Weighted reranker combining dense + sparse."""
+        weights = {"dense": 0.7, "sparse": 0.3}
+        reranker = WeightedReRanker(
+            topn=10, metric=MetricType.IP, weights=weights
+        )
+        result = collection_with_multiple_docs.query(
+            [
+                VectorQuery(
+                    field_name="dense", vector=multiple_docs[0].vector("dense")
+                ),
+                VectorQuery(
+                    field_name="sparse", vector=multiple_docs[0].vector("sparse")
+                ),
+            ],
+            topk=10,
+            reranker=reranker,
+        )
+        assert len(result) > 0
+        assert len(result) <= 10

@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <shared_mutex>
 #include <string>
 #include <variant>
@@ -29,6 +30,7 @@
 #include <zvec/db/collection.h>
 #include <zvec/db/doc.h>
 #include <zvec/db/options.h>
+#include <zvec/db/reranker.h>
 #include <zvec/db/schema.h>
 #include <zvec/db/status.h>
 #include "db/common/constants.h"
@@ -116,6 +118,9 @@ class CollectionImpl : public Collection {
   Status DeleteByFilter(const std::string &filter) override;
 
   Result<DocPtrList> Query(const VectorQuery &query) const override;
+
+  Result<DocPtrList> MultiQuery(
+      const MultiVectorQuery &query) const override;
 
   Result<GroupResults> GroupByQuery(
       const GroupByVectorQuery &query) const override;
@@ -1592,6 +1597,65 @@ Result<DocPtrList> CollectionImpl::Query(const VectorQuery &query) const {
   }
 
   return sql_engine_->execute(schema_, sanitized, segments);
+}
+
+Result<DocPtrList> CollectionImpl::MultiQuery(
+    const MultiVectorQuery &query) const {
+  std::shared_lock lock(schema_handle_mtx_);
+
+  CHECK_DESTROY_RETURN_STATUS_EXPECTED(destroyed_, false);
+
+  if (query.queries.empty()) {
+    return tl::make_unexpected(
+        Status::InvalidArgument("No queries provided for MultiQuery"));
+  }
+
+  // Validate each sub-query and check for duplicate field names
+  std::set<std::string> seen_fields;
+  for (const auto &vq : query.queries) {
+    if (seen_fields.count(vq.field_name_)) {
+      return tl::make_unexpected(Status::InvalidArgument(
+          "Duplicate field name in multi-vector query: ", vq.field_name_));
+    }
+    seen_fields.insert(vq.field_name_);
+    auto *field_schema = schema_->get_vector_field(vq.field_name_);
+    if (!field_schema) {
+      return tl::make_unexpected(Status::InvalidArgument(
+          "Vector field not found: ", vq.field_name_));
+    }
+    auto s = vq.validate(field_schema);
+    CHECK_RETURN_STATUS_EXPECTED(s);
+  }
+
+  auto segments = get_all_segments();
+  if (segments.empty()) {
+    return DocPtrList();
+  }
+
+  // Execute each VectorQuery and collect results per field
+  std::map<std::string, DocPtrList> query_results;
+
+  for (const auto &vq : query.queries) {
+    auto result = sql_engine_->execute(schema_, vq, segments);
+    if (!result.has_value()) {
+      return tl::make_unexpected(result.error());
+    }
+    query_results[vq.field_name_] = std::move(result.value());
+  }
+
+  // Merge and rerank results
+  if (query.reranker) {
+    return query.reranker->rerank(query_results);
+  }
+
+  // Without a reranker, single query returns directly
+  if (query_results.size() == 1) {
+    return std::move(query_results.begin()->second);
+  }
+
+  return tl::make_unexpected(
+      Status::InvalidArgument(
+          "Reranker is required for multi-vector query"));
 }
 
 Result<GroupResults> CollectionImpl::GroupByQuery(

@@ -18,6 +18,8 @@ import math
 from collections import defaultdict
 from typing import Optional
 
+from _zvec import _RrfReRanker, _WeightedReRanker
+
 from ..model.doc import Doc
 from ..typing import MetricType
 from .rerank_function import RerankFunction
@@ -51,10 +53,16 @@ class RrfReRanker(RerankFunction):
     ):
         super().__init__(topn=topn, rerank_field=rerank_field)
         self._rank_constant = rank_constant
+        # Use C++ implementation for performance
+        self._cpp_reranker = _RrfReRanker(topn, rank_constant)
 
     @property
     def rank_constant(self) -> int:
         return self._rank_constant
+
+    def _get_object(self):
+        """Return the underlying C++ RrfReRanker instance."""
+        return self._cpp_reranker
 
     def _rrf_score(self, rank: int) -> float:
         return 1.0 / (self._rank_constant + rank + 1)
@@ -121,6 +129,10 @@ class WeightedReRanker(RerankFunction):
         super().__init__(topn=topn, rerank_field=rerank_field)
         self._weights = weights or {}
         self._metric = metric
+        # Use C++ implementation for performance
+        self._cpp_reranker = _WeightedReRanker(
+            topn, metric, self._weights
+        )
 
     @property
     def weights(self) -> dict[str, float]:
@@ -131,6 +143,10 @@ class WeightedReRanker(RerankFunction):
     def metric(self) -> MetricType:
         """MetricType: Distance metric used for score normalization."""
         return self._metric
+
+    def _get_object(self):
+        """Return the underlying C++ WeightedReRanker instance."""
+        return self._cpp_reranker
 
     def rerank(self, query_results: dict[str, list[Doc]]) -> list[Doc]:
         """Combine scores from multiple vector fields using weighted sum.

@@ -98,6 +98,19 @@ class Collection {
 
   virtual Result<DocPtrList> Query(const VectorQuery &query) const = 0;
 
+  /**
+   * @brief Execute a multi-vector query with optional re-ranking.
+   *
+   * Runs multiple vector queries sequentially, then combines and re-ranks
+   * results using the provided reranker. If no reranker is provided and
+   * there are multiple queries, returns an error.
+   *
+   * @param query The multi-vector query specification.
+   * @return Combined and re-ranked document list OR an error.
+   */
+  virtual Result<DocPtrList> MultiQuery(
+      const MultiVectorQuery &query) const = 0;
+
   virtual Result<GroupResults> GroupByQuery(
       const GroupByVectorQuery &query) const = 0;
 

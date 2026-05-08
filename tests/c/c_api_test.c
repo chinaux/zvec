@@ -4126,6 +4126,235 @@ void test_actual_vector_queries(void) {
   TEST_END();
 }
 
+void test_reranker_functions(void) {
+  TEST_START();
+
+  // Test 1: Create RRF reranker
+  zvec_reranker_t *rrf = zvec_reranker_create_rrf(10, 60);
+  TEST_ASSERT(rrf != NULL);
+  if (rrf) {
+    TEST_ASSERT(zvec_reranker_get_topn(rrf) == 10);
+    TEST_ASSERT(zvec_reranker_get_rank_constant(rrf) == 60);
+    zvec_reranker_destroy(rrf);
+  }
+
+  // Test 2: Create RRF reranker with different params
+  zvec_reranker_t *rrf2 = zvec_reranker_create_rrf(5, 100);
+  TEST_ASSERT(rrf2 != NULL);
+  if (rrf2) {
+    TEST_ASSERT(zvec_reranker_get_topn(rrf2) == 5);
+    TEST_ASSERT(zvec_reranker_get_rank_constant(rrf2) == 100);
+    zvec_reranker_destroy(rrf2);
+  }
+
+  // Test 3: Create Weighted reranker
+  const char *fields[] = {"embedding1", "embedding2"};
+  double weights[] = {0.7, 0.3};
+  zvec_reranker_t *weighted =
+      zvec_reranker_create_weighted(10, 0, fields, weights, 2);
+  TEST_ASSERT(weighted != NULL);
+  if (weighted) {
+    TEST_ASSERT(zvec_reranker_get_topn(weighted) == 10);
+    TEST_ASSERT(zvec_reranker_get_rank_constant(weighted) == -1);
+    zvec_reranker_destroy(weighted);
+  }
+
+  // Test 4: Create Weighted reranker with no weights
+  zvec_reranker_t *weighted2 =
+      zvec_reranker_create_weighted(20, 2, NULL, NULL, 0);
+  TEST_ASSERT(weighted2 != NULL);
+  if (weighted2) {
+    TEST_ASSERT(zvec_reranker_get_topn(weighted2) == 20);
+    zvec_reranker_destroy(weighted2);
+  }
+
+  // Test 5: NULL reranker operations
+  TEST_ASSERT(zvec_reranker_get_topn(NULL) == 0);
+  TEST_ASSERT(zvec_reranker_get_rank_constant(NULL) == -1);
+  zvec_reranker_destroy(NULL);  // Should not crash
+
+  TEST_END();
+}
+
+void test_multi_vector_query_with_reranker(void) {
+  TEST_START();
+
+  char temp_dir[] = "./zvec_test_multi_query_reranker";
+
+  // Create schema with two vector fields
+  zvec_collection_schema_t *schema =
+      zvec_collection_schema_create("multi_query_test");
+  TEST_ASSERT(schema != NULL);
+
+  if (schema) {
+    // Add ID field
+    zvec_field_schema_t *id_field =
+        zvec_field_schema_create("id", ZVEC_DATA_TYPE_INT64, false, 0);
+    zvec_collection_schema_add_field(schema, id_field);
+
+    // Add first vector field (embedding1) with HNSW index
+    zvec_index_params_t *hnsw1 = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+    zvec_index_params_set_metric_type(hnsw1, ZVEC_METRIC_TYPE_L2);
+    zvec_index_params_set_hnsw_params(hnsw1, 16, 100);
+    zvec_field_schema_t *vec1 = zvec_field_schema_create(
+        "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32, false, 4);
+    zvec_field_schema_set_index_params(vec1, hnsw1);
+    zvec_collection_schema_add_field(schema, vec1);
+    zvec_index_params_destroy(hnsw1);
+
+    // Add second vector field (embedding2) with HNSW index
+    zvec_index_params_t *hnsw2 = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+    zvec_index_params_set_metric_type(hnsw2, ZVEC_METRIC_TYPE_L2);
+    zvec_index_params_set_hnsw_params(hnsw2, 16, 100);
+    zvec_field_schema_t *vec2 = zvec_field_schema_create(
+        "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32, false, 4);
+    zvec_field_schema_set_index_params(vec2, hnsw2);
+    zvec_collection_schema_add_field(schema, vec2);
+    zvec_index_params_destroy(hnsw2);
+
+    zvec_collection_t *collection = NULL;
+    zvec_error_code_t err =
+        zvec_collection_create_and_open(temp_dir, schema, NULL, &collection);
+    TEST_ASSERT(err == ZVEC_OK);
+    TEST_ASSERT(collection != NULL);
+
+    if (collection) {
+      // Insert test documents with both vector fields
+      float e1_v1[] = {1.0f, 0.0f, 0.0f, 0.0f};
+      float e1_v2[] = {0.0f, 1.0f, 0.0f, 0.0f};
+      float e1_v3[] = {0.0f, 0.0f, 1.0f, 0.0f};
+      float e1_v4[] = {0.7f, 0.7f, 0.0f, 0.0f};
+
+      float e2_v1[] = {0.0f, 1.0f, 0.0f, 0.0f};
+      float e2_v2[] = {1.0f, 0.0f, 0.0f, 0.0f};
+      float e2_v3[] = {0.0f, 0.0f, 0.0f, 1.0f};
+      float e2_v4[] = {0.5f, 0.5f, 0.0f, 0.0f};
+
+      zvec_doc_t *docs[4];
+      for (int i = 0; i < 4; i++) {
+        docs[i] = zvec_doc_create();
+        zvec_doc_set_pk(docs[i], zvec_test_make_pk(i + 1));
+        zvec_doc_add_field_by_value(docs[i], "id", ZVEC_DATA_TYPE_INT64,
+                                    &(int64_t){i + 1}, sizeof(int64_t));
+      }
+
+      zvec_doc_add_field_by_value(docs[0], "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32,
+                                  e1_v1, sizeof(e1_v1));
+      zvec_doc_add_field_by_value(docs[0], "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32,
+                                  e2_v1, sizeof(e2_v1));
+
+      zvec_doc_add_field_by_value(docs[1], "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32,
+                                  e1_v2, sizeof(e1_v2));
+      zvec_doc_add_field_by_value(docs[1], "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32,
+                                  e2_v2, sizeof(e2_v2));
+
+      zvec_doc_add_field_by_value(docs[2], "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32,
+                                  e1_v3, sizeof(e1_v3));
+      zvec_doc_add_field_by_value(docs[2], "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32,
+                                  e2_v3, sizeof(e2_v3));
+
+      zvec_doc_add_field_by_value(docs[3], "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32,
+                                  e1_v4, sizeof(e1_v4));
+      zvec_doc_add_field_by_value(docs[3], "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32,
+                                  e2_v4, sizeof(e2_v4));
+
+      size_t success_count, error_count;
+      err = zvec_collection_insert(collection, (const zvec_doc_t **)docs, 4,
+                                   &success_count, &error_count);
+      TEST_ASSERT(err == ZVEC_OK);
+      TEST_ASSERT(success_count == 4);
+
+      zvec_collection_flush(collection);
+
+      // Test 1: MultiQuery with RRF reranker
+      zvec_reranker_t *rrf = zvec_reranker_create_rrf(3, 60);
+      TEST_ASSERT(rrf != NULL);
+
+      zvec_multi_vector_query_t *mvq = zvec_multi_vector_query_create();
+      TEST_ASSERT(mvq != NULL);
+      zvec_multi_vector_query_set_topk(mvq, 3);
+      zvec_multi_vector_query_set_include_vector(mvq, false);
+
+      // Add first sub-query for embedding1
+      zvec_vector_query_t *vq1 = zvec_vector_query_create();
+      zvec_vector_query_set_field_name(vq1, "embedding1");
+      zvec_vector_query_set_query_vector(vq1, e1_v1, sizeof(e1_v1));
+      zvec_vector_query_set_topk(vq1, 3);
+      zvec_multi_vector_query_add_query(mvq, vq1);
+
+      // Add second sub-query for embedding2
+      zvec_vector_query_t *vq2 = zvec_vector_query_create();
+      zvec_vector_query_set_field_name(vq2, "embedding2");
+      zvec_vector_query_set_query_vector(vq2, e2_v1, sizeof(e2_v1));
+      zvec_vector_query_set_topk(vq2, 3);
+      zvec_multi_vector_query_add_query(mvq, vq2);
+
+      // Set reranker
+      zvec_multi_vector_query_set_reranker(mvq, rrf);
+
+      TEST_ASSERT(zvec_multi_vector_query_get_query_count(mvq) == 2);
+      TEST_ASSERT(zvec_multi_vector_query_get_topk(mvq) == 3);
+      TEST_ASSERT(zvec_multi_vector_query_get_include_vector(mvq) == false);
+
+      // Execute multi query
+      zvec_doc_t **results = NULL;
+      size_t result_count = 0;
+      err = zvec_collection_multi_query(collection, mvq, &results, &result_count);
+      TEST_ASSERT(err == ZVEC_OK);
+      TEST_ASSERT(results != NULL);
+      TEST_ASSERT(result_count > 0);
+      TEST_ASSERT(result_count <= 3);
+
+      zvec_docs_free(results, result_count);
+
+      // Cleanup
+      zvec_vector_query_destroy(vq1);
+      zvec_vector_query_destroy(vq2);
+      zvec_multi_vector_query_destroy(mvq);
+      // Note: rrf is owned by mvq after set_reranker, don't destroy separately
+
+      // Test 2: MultiVectorQuery property setters/getters
+      zvec_multi_vector_query_t *mvq2 = zvec_multi_vector_query_create();
+      TEST_ASSERT(mvq2 != NULL);
+      zvec_multi_vector_query_set_topk(mvq2, 5);
+      TEST_ASSERT(zvec_multi_vector_query_get_topk(mvq2) == 5);
+
+      zvec_multi_vector_query_set_filter(mvq2, "id > 1");
+      TEST_ASSERT(strcmp(zvec_multi_vector_query_get_filter(mvq2), "id > 1") == 0);
+
+      zvec_multi_vector_query_set_include_vector(mvq2, true);
+      TEST_ASSERT(zvec_multi_vector_query_get_include_vector(mvq2) == true);
+
+      const char *out_fields[] = {"id"};
+      zvec_multi_vector_query_set_output_fields(mvq2, out_fields, 1);
+      const char **got_fields = NULL;
+      size_t field_count = 0;
+      err = zvec_multi_vector_query_get_output_fields(mvq2, &got_fields,
+                                                       &field_count);
+      TEST_ASSERT(err == ZVEC_OK);
+      TEST_ASSERT(field_count == 1);
+      if (field_count > 0) {
+        TEST_ASSERT(strcmp(got_fields[0], "id") == 0);
+        zvec_free((char *)got_fields);
+      }
+
+      zvec_multi_vector_query_destroy(mvq2);
+
+      // Cleanup documents
+      for (int i = 0; i < 4; i++) {
+        zvec_doc_destroy(docs[i]);
+      }
+      zvec_collection_destroy(collection);
+    }
+
+    zvec_collection_schema_destroy(schema);
+  }
+
+  cleanup_temp_directory(temp_dir);
+
+  TEST_END();
+}
+
 void test_index_creation_and_management(void) {
   TEST_START();
 
@@ -5409,6 +5638,8 @@ int main(void) {
   // Query tests
   test_query_params_functions();
   test_actual_vector_queries();
+  test_reranker_functions();
+  test_multi_vector_query_with_reranker();
 
   // Performance tests
   // test_performance_benchmarks();
