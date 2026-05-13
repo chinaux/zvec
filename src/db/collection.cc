@@ -1610,9 +1610,10 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
         Status::InvalidArgument("No queries provided for MultiQuery"));
   }
 
-  // Validate each sub-query and check for duplicate field names
+  // Sanitize each sub-query and check for duplicate field names
+  MultiVectorQuery sanitized = query;
   std::set<std::string> seen_fields;
-  for (const auto &vq : query.queries) {
+  for (auto &vq : sanitized.queries) {
     if (seen_fields.count(vq.field_name_)) {
       return tl::make_unexpected(Status::InvalidArgument(
           "Duplicate field name in multi-vector query: ", vq.field_name_));
@@ -1623,7 +1624,7 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
       return tl::make_unexpected(Status::InvalidArgument(
           "Vector field not found: ", vq.field_name_));
     }
-    auto s = vq.validate(field_schema);
+    auto s = vq.validate_and_sanitize(field_schema);
     CHECK_RETURN_STATUS_EXPECTED(s);
   }
 
@@ -1635,7 +1636,7 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
   // Execute each VectorQuery and collect results per field
   std::map<std::string, DocPtrList> query_results;
 
-  for (const auto &vq : query.queries) {
+  for (const auto &vq : sanitized.queries) {
     auto result = sql_engine_->execute(schema_, vq, segments);
     if (!result.has_value()) {
       return tl::make_unexpected(result.error());
@@ -1644,8 +1645,8 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
   }
 
   // Merge and rerank results
-  if (query.reranker) {
-    return query.reranker->rerank(query_results);
+  if (sanitized.reranker) {
+    return sanitized.reranker->rerank(query_results);
   }
 
   // Without a reranker, single query returns directly
