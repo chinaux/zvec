@@ -78,4 +78,4 @@ class RerankFunction(ABC):
         Returns:
             The C++ Reranker shared pointer, or None if not available.
         """
-        return None
+        return None  # noqa: RET501
