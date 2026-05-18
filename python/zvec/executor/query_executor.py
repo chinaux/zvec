@@ -303,9 +303,7 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
             cpp_reranker = ctx.reranker._get_object()
             if cpp_reranker is not None:
                 mvq = _MultiVectorQuery()
-                mvq.queries = [
-                    self._to_sub_vector_query(vq) for vq in query_vectors
-                ]
+                mvq.queries = [self._to_sub_vector_query(vq) for vq in query_vectors]
                 mvq.topk = ctx.topk
                 if ctx.filter:
                     mvq.filter = ctx.filter
