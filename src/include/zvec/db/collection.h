@@ -17,8 +17,8 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include <zvec/db/query.h>
 #include <zvec/db/options.h>
+#include <zvec/db/query.h>
 #include <zvec/db/stats.h>
 #include <zvec/db/status.h>
 
