@@ -4277,17 +4277,17 @@ void test_multi_vector_query_with_reranker(void) {
       zvec_multi_vector_query_set_include_vector(mvq, false);
 
       // Add first sub-query for embedding1
-      zvec_vector_query_t *vq1 = zvec_vector_query_create();
-      zvec_vector_query_set_field_name(vq1, "embedding1");
-      zvec_vector_query_set_query_vector(vq1, e1_v1, sizeof(e1_v1));
-      zvec_vector_query_set_topk(vq1, 3);
+      zvec_multi_vector_sub_query_t *vq1 = zvec_multi_vector_sub_query_create();
+      zvec_multi_vector_sub_query_set_field_name(vq1, "embedding1");
+      zvec_multi_vector_sub_query_set_query_vector(vq1, e1_v1, sizeof(e1_v1));
+      zvec_multi_vector_sub_query_set_num_candidates(vq1, 3);
       zvec_multi_vector_query_add_query(mvq, vq1);
 
       // Add second sub-query for embedding2
-      zvec_vector_query_t *vq2 = zvec_vector_query_create();
-      zvec_vector_query_set_field_name(vq2, "embedding2");
-      zvec_vector_query_set_query_vector(vq2, e2_v1, sizeof(e2_v1));
-      zvec_vector_query_set_topk(vq2, 3);
+      zvec_multi_vector_sub_query_t *vq2 = zvec_multi_vector_sub_query_create();
+      zvec_multi_vector_sub_query_set_field_name(vq2, "embedding2");
+      zvec_multi_vector_sub_query_set_query_vector(vq2, e2_v1, sizeof(e2_v1));
+      zvec_multi_vector_sub_query_set_num_candidates(vq2, 3);
       zvec_multi_vector_query_add_query(mvq, vq2);
 
       // Set reranker
@@ -4309,10 +4309,10 @@ void test_multi_vector_query_with_reranker(void) {
       zvec_docs_free(results, result_count);
 
       // Cleanup
-      zvec_vector_query_destroy(vq1);
-      zvec_vector_query_destroy(vq2);
+      zvec_multi_vector_sub_query_destroy(vq1);
+      zvec_multi_vector_sub_query_destroy(vq2);
       zvec_multi_vector_query_destroy(mvq);
-      // Note: rrf is owned by mvq after set_reranker, don't destroy separately
+      zvec_reranker_destroy(rrf);
 
       // Test 2: MultiVectorQuery property setters/getters
       zvec_multi_vector_query_t *mvq2 = zvec_multi_vector_query_create();

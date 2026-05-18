@@ -20,7 +20,6 @@
 #include <unordered_map>
 #include <variant>
 #include <zvec/ailego/utility/float_helper.h>
-#include <zvec/db/query_params.h>
 #include <zvec/db/schema.h>
 #include <zvec/db/status.h>
 #include <zvec/db/type.h>
@@ -363,58 +362,5 @@ using DocPtrList = std::vector<Doc::Ptr>;
 using DocPtrMap = std::unordered_map<std::string, Doc::Ptr>;
 
 using WriteResults = std::vector<Status>;
-
-struct VectorQuery {
-  int topk_;
-  std::string field_name_;
-  std::string query_vector_;  // fp16, void *
-  std::string query_sparse_indices_;
-  std::string query_sparse_values_;
-  std::string filter_;
-  bool include_vector_{false};
-  bool include_doc_id_{false};
-  // select * by default, select no field if output_fields_ is empty, select
-  // specific fields if output_fields_ is not empty
-  std::optional<std::vector<std::string>> output_fields_;
-  QueryParams::Ptr query_params_;
-
-  Status validate_and_sanitize(const FieldSchema *schema);
-};
-
-struct GroupByVectorQuery {
-  std::string field_name_;
-  std::string query_vector_;
-  std::string query_sparse_indices_;
-  std::string query_sparse_values_;
-  std::string filter_;
-  bool include_vector_;
-  // select * by default, select no field if output_fields_ is empty, select
-  // specific fields if output_fields_ is not empty
-  std::optional<std::vector<std::string>> output_fields_;
-  std::string group_by_field_name_;
-  uint32_t group_count_ = 2;
-  uint32_t group_topk_ = 3;
-  QueryParams::Ptr query_params_;
-};
-
-//! Multi-vector query structure for querying multiple vector fields
-//! with optional re-ranking of combined results.
-class Reranker;  // forward declaration
-
-struct MultiVectorQuery {
-  std::vector<VectorQuery> queries;
-  int topk{10};
-  std::string filter;
-  bool include_vector{false};
-  std::optional<std::vector<std::string>> output_fields;
-  std::shared_ptr<Reranker> reranker{nullptr};
-};
-
-struct GroupResult {
-  std::string group_by_value_;
-  std::vector<Doc> docs_;
-};
-
-using GroupResults = std::vector<GroupResult>;
 
 }  // namespace zvec

@@ -119,8 +119,7 @@ class CollectionImpl : public Collection {
 
   Result<DocPtrList> Query(const VectorQuery &query) const override;
 
-  Result<DocPtrList> MultiQuery(
-      const MultiVectorQuery &query) const override;
+  Result<DocPtrList> MultiQuery(const MultiVectorQuery &query) const override;
 
   Result<GroupResults> GroupByQuery(
       const GroupByVectorQuery &query) const override;
@@ -1608,27 +1607,73 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
 
   CHECK_DESTROY_RETURN_STATUS_EXPECTED(destroyed_, false);
 
-  if (query.queries.empty()) {
+  if (query.queries.size() < 2) {
     return tl::make_unexpected(
-        Status::InvalidArgument("No queries provided for MultiQuery"));
+        Status::InvalidArgument("MultiQuery requires at least 2 sub-queries"));
   }
 
-  // Sanitize each sub-query and check for duplicate field names
-  MultiVectorQuery sanitized = query;
+  if (!query.reranker) {
+    return tl::make_unexpected(
+        Status::InvalidArgument("Reranker is required for multi-vector query"));
+  }
+
+  // Use query.topk as reranker's topn
+  query.reranker->set_topn(query.topk);
+
+  // If WeightedReRanker, verify metric consistency with field schemas
+  auto *weighted = dynamic_cast<WeightedReRanker *>(query.reranker.get());
+  if (weighted) {
+    for (const auto &sub : query.queries) {
+      auto *field_schema = schema_->get_vector_field(sub.field_name_);
+      if (!field_schema) {
+        return tl::make_unexpected(Status::InvalidArgument(
+            "Vector field not found: ", sub.field_name_));
+      }
+      auto *vec_params = dynamic_cast<const VectorIndexParams *>(
+          field_schema->index_params().get());
+      if (vec_params && vec_params->metric_type() != weighted->metric()) {
+        return tl::make_unexpected(Status::InvalidArgument(
+            "WeightedReRanker metric mismatch for field: ", sub.field_name_,
+            ". Reranker metric: ",
+            std::to_string(static_cast<uint32_t>(weighted->metric())),
+            ", field metric: ",
+            std::to_string(static_cast<uint32_t>(vec_params->metric_type()))));
+      }
+    }
+  }
+
+  // Convert SubVectorQuery to VectorQuery and validate
   std::set<std::string> seen_fields;
-  for (auto &vq : sanitized.queries) {
-    if (seen_fields.count(vq.field_name_)) {
+  std::vector<VectorQuery> converted_queries;
+  converted_queries.reserve(query.queries.size());
+
+  for (const auto &sub : query.queries) {
+    if (seen_fields.count(sub.field_name_)) {
       return tl::make_unexpected(Status::InvalidArgument(
-          "Duplicate field name in multi-vector query: ", vq.field_name_));
+          "Duplicate field name in multi-vector query: ", sub.field_name_));
     }
-    seen_fields.insert(vq.field_name_);
-    auto *field_schema = schema_->get_vector_field(vq.field_name_);
+    seen_fields.insert(sub.field_name_);
+    auto *field_schema = schema_->get_vector_field(sub.field_name_);
     if (!field_schema) {
-      return tl::make_unexpected(Status::InvalidArgument(
-          "Vector field not found: ", vq.field_name_));
+      return tl::make_unexpected(
+          Status::InvalidArgument("Vector field not found: ", sub.field_name_));
     }
+
+    VectorQuery vq;
+    vq.topk_ = sub.num_candidates_;
+    vq.field_name_ = sub.field_name_;
+    vq.query_vector_ = sub.query_vector_;
+    vq.query_sparse_indices_ = sub.query_sparse_indices_;
+    vq.query_sparse_values_ = sub.query_sparse_values_;
+    vq.query_params_ = sub.query_params_;
+    vq.filter_ = query.filter;
+    vq.include_vector_ = query.include_vector;
+    vq.include_doc_id_ = query.include_doc_id_;
+    vq.output_fields_ = query.output_fields;
+
     auto s = vq.validate_and_sanitize(field_schema);
     CHECK_RETURN_STATUS_EXPECTED(s);
+    converted_queries.push_back(std::move(vq));
   }
 
   auto segments = get_all_segments();
@@ -1639,7 +1684,7 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
   // Execute each VectorQuery and collect results per field
   std::map<std::string, DocPtrList> query_results;
 
-  for (const auto &vq : sanitized.queries) {
+  for (const auto &vq : converted_queries) {
     auto result = sql_engine_->execute(schema_, vq, segments);
     if (!result.has_value()) {
       return tl::make_unexpected(result.error());
@@ -1648,18 +1693,7 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
   }
 
   // Merge and rerank results
-  if (sanitized.reranker) {
-    return sanitized.reranker->rerank(query_results);
-  }
-
-  // Without a reranker, single query returns directly
-  if (query_results.size() == 1) {
-    return std::move(query_results.begin()->second);
-  }
-
-  return tl::make_unexpected(
-      Status::InvalidArgument(
-          "Reranker is required for multi-vector query"));
+  return query.reranker->rerank(query_results);
 }
 
 Result<GroupResults> CollectionImpl::GroupByQuery(

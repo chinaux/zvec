@@ -17,6 +17,7 @@
 #include <pybind11/stl.h>
 #include <zvec/core/interface/constants.h>
 #include <zvec/db/index_params.h>
+#include <zvec/db/query.h>
 #include "python_doc.h"
 
 namespace zvec {

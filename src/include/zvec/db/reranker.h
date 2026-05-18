@@ -30,14 +30,19 @@ class Reranker {
   explicit Reranker(int topn = 10) : topn_(topn) {}
   virtual ~Reranker() = default;
 
-  int topn() const { return topn_; }
+  int topn() const {
+    return topn_;
+  }
+  void set_topn(int topn) {
+    topn_ = topn;
+  }
 
   //! Re-rank documents from one or more vector queries.
   //! \param query_results Mapping from vector field name to list of retrieved
   //!   documents (sorted by relevance).
   //! \return Re-ranked list of documents (length <= topn), with updated scores.
   virtual DocPtrList rerank(
-      const std::map<std::string, DocPtrList>& query_results) const = 0;
+      const std::map<std::string, DocPtrList> &query_results) const = 0;
 
  protected:
   int topn_;
@@ -54,10 +59,12 @@ class RrfReRanker : public Reranker {
   RrfReRanker(int topn = 10, int rank_constant = 60)
       : Reranker(topn), rank_constant_(rank_constant) {}
 
-  int rank_constant() const { return rank_constant_; }
+  int rank_constant() const {
+    return rank_constant_;
+  }
 
   DocPtrList rerank(
-      const std::map<std::string, DocPtrList>& query_results) const override;
+      const std::map<std::string, DocPtrList> &query_results) const override;
 
  private:
   int rank_constant_;
@@ -71,13 +78,17 @@ class RrfReRanker : public Reranker {
 class WeightedReRanker : public Reranker {
  public:
   WeightedReRanker(int topn = 10, MetricType metric = MetricType::L2,
-                   const std::map<std::string, double>& weights = {});
+                   const std::map<std::string, double> &weights = {});
 
-  MetricType metric() const { return metric_; }
-  const std::map<std::string, double>& weights() const { return weights_; }
+  MetricType metric() const {
+    return metric_;
+  }
+  const std::map<std::string, double> &weights() const {
+    return weights_;
+  }
 
   DocPtrList rerank(
-      const std::map<std::string, DocPtrList>& query_results) const override;
+      const std::map<std::string, DocPtrList> &query_results) const override;
 
   //! Normalize a raw distance/similarity score to [0, 1] range
   static double normalize_score(double score, MetricType metric);
@@ -93,14 +104,14 @@ class WeightedReRanker : public Reranker {
 //! When the callback is a Python function, GIL must be managed by the caller.
 class CallbackReRanker : public Reranker {
  public:
-  using Callback = std::function<DocPtrList(
-      const std::map<std::string, DocPtrList>&)>;
+  using Callback =
+      std::function<DocPtrList(const std::map<std::string, DocPtrList> &)>;
 
   CallbackReRanker(Callback fn, int topn = 10)
       : Reranker(topn), callback_(std::move(fn)) {}
 
   DocPtrList rerank(
-      const std::map<std::string, DocPtrList>& query_results) const override {
+      const std::map<std::string, DocPtrList> &query_results) const override {
     return callback_(query_results);
   }
 

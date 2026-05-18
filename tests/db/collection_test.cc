@@ -3708,8 +3708,8 @@ TEST_F(CollectionTest, Feature_MultiQuery_Validate) {
     mvq.topk = 10;
     auto query_doc = TestHelper::CreateDoc(1, *schema);
 
-    VectorQuery vq1;
-    vq1.topk_ = 10;
+    SubVectorQuery vq1;
+    vq1.num_candidates_ = 10;
     vq1.field_name_ = "dense_fp32";
     auto vector = query_doc.get<std::vector<float>>("dense_fp32");
     ASSERT_TRUE(vector.has_value());
@@ -3717,8 +3717,8 @@ TEST_F(CollectionTest, Feature_MultiQuery_Validate) {
                              vector.value().size() * sizeof(float));
     mvq.queries.push_back(vq1);
 
-    VectorQuery vq2;
-    vq2.topk_ = 10;
+    SubVectorQuery vq2;
+    vq2.num_candidates_ = 10;
     vq2.field_name_ = "dense_fp16";
     auto vector2 = query_doc.get<std::vector<float>>("dense_fp32");
     ASSERT_TRUE(vector2.has_value());
@@ -3737,11 +3737,17 @@ TEST_F(CollectionTest, Feature_MultiQuery_Validate) {
     mvq.topk = 10;
     mvq.reranker = std::make_shared<RrfReRanker>(10, 60);
 
-    VectorQuery vq;
-    vq.topk_ = 10;
-    vq.field_name_ = "nonexistent_field";
-    vq.query_vector_.assign(128 * sizeof(float), '\0');
-    mvq.queries.push_back(vq);
+    SubVectorQuery vq1;
+    vq1.num_candidates_ = 10;
+    vq1.field_name_ = "nonexistent_field";
+    vq1.query_vector_.assign(128 * sizeof(float), '\0');
+    mvq.queries.push_back(vq1);
+
+    SubVectorQuery vq2;
+    vq2.num_candidates_ = 10;
+    vq2.field_name_ = "dense_fp32";
+    vq2.query_vector_.assign(128 * sizeof(float), '\0');
+    mvq.queries.push_back(vq2);
 
     auto result = collection->MultiQuery(mvq);
     ASSERT_FALSE(result.has_value());
@@ -3754,14 +3760,14 @@ TEST_F(CollectionTest, Feature_MultiQuery_Validate) {
     mvq.topk = 10;
     mvq.reranker = std::make_shared<RrfReRanker>(10, 60);
 
-    VectorQuery vq1;
-    vq1.topk_ = 10;
+    SubVectorQuery vq1;
+    vq1.num_candidates_ = 10;
     vq1.field_name_ = "dense_fp32";
     vq1.query_vector_.assign(128 * sizeof(float), '\0');
     mvq.queries.push_back(vq1);
 
-    VectorQuery vq2;
-    vq2.topk_ = 10;
+    SubVectorQuery vq2;
+    vq2.num_candidates_ = 10;
     vq2.field_name_ = "dense_fp32";
     vq2.query_vector_.assign(128 * sizeof(float), '\0');
     mvq.queries.push_back(vq2);
@@ -3782,15 +3788,15 @@ TEST_F(CollectionTest, Feature_MultiQuery_SingleFieldWithReranker) {
                                                         options, 0, doc_count);
   ASSERT_NE(collection, nullptr);
 
-  // Single query with reranker should work and return results
+  // Single query with reranker should fail (requires at least 2 sub-queries)
   auto query_doc = TestHelper::CreateDoc(1, *schema);
 
   MultiVectorQuery mvq;
   mvq.topk = 10;
   mvq.reranker = std::make_shared<RrfReRanker>(10, 60);
 
-  VectorQuery vq;
-  vq.topk_ = 10;
+  SubVectorQuery vq;
+  vq.num_candidates_ = 10;
   vq.field_name_ = "dense_fp32";
   auto vector = query_doc.get<std::vector<float>>("dense_fp32");
   ASSERT_TRUE(vector.has_value());
@@ -3799,9 +3805,8 @@ TEST_F(CollectionTest, Feature_MultiQuery_SingleFieldWithReranker) {
   mvq.queries.push_back(vq);
 
   auto result = collection->MultiQuery(mvq);
-  ASSERT_TRUE(result.has_value()) << result.error().message();
-  EXPECT_GT(result.value().size(), 0u);
-  EXPECT_LE(result.value().size(), 10u);
+  ASSERT_FALSE(result.has_value());
+  EXPECT_EQ(result.error().code(), StatusCode::INVALID_ARGUMENT);
 }
 
 TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldRRF) {
@@ -3825,8 +3830,8 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldRRF) {
   ASSERT_TRUE(vector1.has_value());
 
   {
-    VectorQuery vq;
-    vq.topk_ = 10;
+    SubVectorQuery vq;
+    vq.num_candidates_ = 10;
     vq.field_name_ = "dense_fp32";
     vq.query_vector_.assign((char *)vector1.value().data(),
                              vector1.value().size() * sizeof(float));
@@ -3839,8 +3844,8 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldRRF) {
   ASSERT_TRUE(sparse.has_value());
 
   {
-    VectorQuery vq;
-    vq.topk_ = 10;
+    SubVectorQuery vq;
+    vq.num_candidates_ = 10;
     vq.field_name_ = "sparse_fp32";
     vq.query_sparse_indices_.assign(
         (char *)sparse.value().first.data(),
@@ -3882,8 +3887,8 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldWeighted) {
 
   // Query dense_fp32 field
   {
-    VectorQuery vq;
-    vq.topk_ = 10;
+    SubVectorQuery vq;
+    vq.num_candidates_ = 10;
     vq.field_name_ = "dense_fp32";
     auto vector = query_doc.get<std::vector<float>>("dense_fp32");
     ASSERT_TRUE(vector.has_value());
@@ -3894,8 +3899,8 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldWeighted) {
 
   // Query sparse_fp32 field
   {
-    VectorQuery vq;
-    vq.topk_ = 10;
+    SubVectorQuery vq;
+    vq.num_candidates_ = 10;
     vq.field_name_ = "sparse_fp32";
     auto sparse = query_doc.get<
         std::pair<std::vector<uint32_t>, std::vector<float>>>("sparse_fp32");
@@ -3932,14 +3937,28 @@ TEST_F(CollectionTest, Feature_MultiQuery_WithFilter) {
   mvq.filter = "int32 > 50";
   mvq.reranker = std::make_shared<RrfReRanker>(10, 60);
 
-  VectorQuery vq;
-  vq.topk_ = 10;
-  vq.field_name_ = "dense_fp32";
+  SubVectorQuery vq1;
+  vq1.num_candidates_ = 10;
+  vq1.field_name_ = "dense_fp32";
   auto vector = query_doc.get<std::vector<float>>("dense_fp32");
   ASSERT_TRUE(vector.has_value());
-  vq.query_vector_.assign((char *)vector.value().data(),
+  vq1.query_vector_.assign((char *)vector.value().data(),
                            vector.value().size() * sizeof(float));
-  mvq.queries.push_back(vq);
+  mvq.queries.push_back(vq1);
+
+  auto sparse = query_doc.get<
+      std::pair<std::vector<uint32_t>, std::vector<float>>>("sparse_fp32");
+  ASSERT_TRUE(sparse.has_value());
+  SubVectorQuery vq2;
+  vq2.num_candidates_ = 10;
+  vq2.field_name_ = "sparse_fp32";
+  vq2.query_sparse_indices_.assign(
+      (char *)sparse.value().first.data(),
+      sparse.value().first.size() * sizeof(uint32_t));
+  vq2.query_sparse_values_.assign(
+      (char *)sparse.value().second.data(),
+      sparse.value().second.size() * sizeof(float));
+  mvq.queries.push_back(vq2);
 
   auto result = collection->MultiQuery(mvq);
   ASSERT_TRUE(result.has_value()) << result.error().message();
@@ -3966,14 +3985,28 @@ TEST_F(CollectionTest, Feature_MultiQuery_WithOutputFields) {
       std::vector<std::string>{"int32", "string"});
   mvq.reranker = std::make_shared<RrfReRanker>(5, 60);
 
-  VectorQuery vq;
-  vq.topk_ = 10;
-  vq.field_name_ = "dense_fp32";
+  SubVectorQuery vq1;
+  vq1.num_candidates_ = 10;
+  vq1.field_name_ = "dense_fp32";
   auto vector = query_doc.get<std::vector<float>>("dense_fp32");
   ASSERT_TRUE(vector.has_value());
-  vq.query_vector_.assign((char *)vector.value().data(),
+  vq1.query_vector_.assign((char *)vector.value().data(),
                            vector.value().size() * sizeof(float));
-  mvq.queries.push_back(vq);
+  mvq.queries.push_back(vq1);
+
+  auto sparse = query_doc.get<
+      std::pair<std::vector<uint32_t>, std::vector<float>>>("sparse_fp32");
+  ASSERT_TRUE(sparse.has_value());
+  SubVectorQuery vq2;
+  vq2.num_candidates_ = 10;
+  vq2.field_name_ = "sparse_fp32";
+  vq2.query_sparse_indices_.assign(
+      (char *)sparse.value().first.data(),
+      sparse.value().first.size() * sizeof(uint32_t));
+  vq2.query_sparse_values_.assign(
+      (char *)sparse.value().second.data(),
+      sparse.value().second.size() * sizeof(float));
+  mvq.queries.push_back(vq2);
 
   auto result = collection->MultiQuery(mvq);
   ASSERT_TRUE(result.has_value()) << result.error().message();

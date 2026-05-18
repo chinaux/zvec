@@ -5421,16 +5421,16 @@ void zvec_multi_vector_query_destroy(zvec_multi_vector_query_t *query) {
 
 zvec_error_code_t zvec_multi_vector_query_add_query(
     zvec_multi_vector_query_t *query,
-    const zvec_vector_query_t *vector_query) {
-  if (!query || !vector_query) {
+    const zvec_multi_vector_sub_query_t *sub_query) {
+  if (!query || !sub_query) {
     SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
-                   "Query or vector_query pointer is null");
+                   "Query or sub_query pointer is null");
     return ZVEC_ERROR_INVALID_ARGUMENT;
   }
 
   auto *mvq = reinterpret_cast<zvec::MultiVectorQuery *>(query);
-  auto *vq = reinterpret_cast<const zvec::VectorQuery *>(vector_query);
-  mvq->queries.push_back(*vq);
+  auto *sub = reinterpret_cast<const zvec::SubVectorQuery *>(sub_query);
+  mvq->queries.push_back(*sub);
 
   return ZVEC_OK;
 }
@@ -5565,6 +5565,140 @@ zvec_error_code_t zvec_multi_vector_query_set_reranker(
       reinterpret_cast<zvec::Reranker::Ptr *>(reranker);
   mvq->reranker = *reranker_ptr;
 
+  return ZVEC_OK;
+}
+
+// =============================================================================
+// SubVectorQuery Implementation
+// =============================================================================
+
+zvec_multi_vector_sub_query_t *zvec_multi_vector_sub_query_create(void) {
+  ZVEC_TRY_RETURN_NULL("Failed to create SubVectorQuery",
+                       auto *query = new zvec::SubVectorQuery();
+                       query->num_candidates_ = 10;
+                       return reinterpret_cast<zvec_multi_vector_sub_query_t *>(
+                           query);)
+  return nullptr;
+}
+
+void zvec_multi_vector_sub_query_destroy(zvec_multi_vector_sub_query_t *query) {
+  if (query) {
+    delete reinterpret_cast<zvec::SubVectorQuery *>(query);
+  }
+}
+
+zvec_error_code_t zvec_multi_vector_sub_query_set_num_candidates(
+    zvec_multi_vector_sub_query_t *query, int num_candidates) {
+  if (!query) {
+    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
+                   "Sub-vector query pointer is null");
+    return ZVEC_ERROR_INVALID_ARGUMENT;
+  }
+  auto *ptr = reinterpret_cast<zvec::SubVectorQuery *>(query);
+  ptr->num_candidates_ = num_candidates;
+  return ZVEC_OK;
+}
+
+int zvec_multi_vector_sub_query_get_num_candidates(
+    const zvec_multi_vector_sub_query_t *query) {
+  if (!query) return 0;
+  auto *ptr = reinterpret_cast<const zvec::SubVectorQuery *>(query);
+  return ptr->num_candidates_;
+}
+
+zvec_error_code_t zvec_multi_vector_sub_query_set_field_name(
+    zvec_multi_vector_sub_query_t *query, const char *field_name) {
+  if (!query || !field_name) {
+    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
+                   "Sub-vector query or field_name pointer is null");
+    return ZVEC_ERROR_INVALID_ARGUMENT;
+  }
+  auto *ptr = reinterpret_cast<zvec::SubVectorQuery *>(query);
+  ptr->field_name_ = std::string(field_name);
+  return ZVEC_OK;
+}
+
+const char *zvec_multi_vector_sub_query_get_field_name(
+    const zvec_multi_vector_sub_query_t *query) {
+  if (!query) return nullptr;
+  auto *ptr = reinterpret_cast<const zvec::SubVectorQuery *>(query);
+  return ptr->field_name_.c_str();
+}
+
+zvec_error_code_t zvec_multi_vector_sub_query_set_query_vector(
+    zvec_multi_vector_sub_query_t *query, const void *data, size_t size) {
+  if (!query || !data || size == 0) {
+    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
+                   "Sub-vector query pointer or data is null/empty");
+    return ZVEC_ERROR_INVALID_ARGUMENT;
+  }
+  auto *ptr = reinterpret_cast<zvec::SubVectorQuery *>(query);
+  ptr->query_vector_.assign(static_cast<const char *>(data), size);
+  return ZVEC_OK;
+}
+
+zvec_error_code_t zvec_multi_vector_sub_query_set_sparse_indices(
+    zvec_multi_vector_sub_query_t *query, const uint32_t *indices, size_t count) {
+  if (!query || (!indices && count > 0)) {
+    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
+                   "Sub-vector query or indices pointer is null");
+    return ZVEC_ERROR_INVALID_ARGUMENT;
+  }
+  auto *ptr = reinterpret_cast<zvec::SubVectorQuery *>(query);
+  ptr->query_sparse_indices_.assign(
+      reinterpret_cast<const char *>(indices), count * sizeof(uint32_t));
+  return ZVEC_OK;
+}
+
+zvec_error_code_t zvec_multi_vector_sub_query_set_sparse_values(
+    zvec_multi_vector_sub_query_t *query, const float *values, size_t count) {
+  if (!query || (!values && count > 0)) {
+    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
+                   "Sub-vector query or values pointer is null");
+    return ZVEC_ERROR_INVALID_ARGUMENT;
+  }
+  auto *ptr = reinterpret_cast<zvec::SubVectorQuery *>(query);
+  ptr->query_sparse_values_.assign(
+      reinterpret_cast<const char *>(values), count * sizeof(float));
+  return ZVEC_OK;
+}
+
+zvec_error_code_t zvec_multi_vector_sub_query_set_hnsw_params(
+    zvec_multi_vector_sub_query_t *query, zvec_hnsw_query_params_t *hnsw_params) {
+  if (!query || !hnsw_params) {
+    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
+                   "Sub-vector query or HNSW params pointer is null");
+    return ZVEC_ERROR_INVALID_ARGUMENT;
+  }
+  auto *ptr = reinterpret_cast<zvec::SubVectorQuery *>(query);
+  auto *params_ptr = reinterpret_cast<zvec::HnswQueryParams *>(hnsw_params);
+  ptr->query_params_.reset(params_ptr);
+  return ZVEC_OK;
+}
+
+zvec_error_code_t zvec_multi_vector_sub_query_set_ivf_params(
+    zvec_multi_vector_sub_query_t *query, zvec_ivf_query_params_t *ivf_params) {
+  if (!query || !ivf_params) {
+    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
+                   "Sub-vector query or IVF params pointer is null");
+    return ZVEC_ERROR_INVALID_ARGUMENT;
+  }
+  auto *ptr = reinterpret_cast<zvec::SubVectorQuery *>(query);
+  auto *params_ptr = reinterpret_cast<zvec::IVFQueryParams *>(ivf_params);
+  ptr->query_params_.reset(params_ptr);
+  return ZVEC_OK;
+}
+
+zvec_error_code_t zvec_multi_vector_sub_query_set_flat_params(
+    zvec_multi_vector_sub_query_t *query, zvec_flat_query_params_t *flat_params) {
+  if (!query || !flat_params) {
+    SET_LAST_ERROR(ZVEC_ERROR_INVALID_ARGUMENT,
+                   "Sub-vector query or Flat params pointer is null");
+    return ZVEC_ERROR_INVALID_ARGUMENT;
+  }
+  auto *ptr = reinterpret_cast<zvec::SubVectorQuery *>(query);
+  auto *params_ptr = reinterpret_cast<zvec::FlatQueryParams *>(flat_params);
+  ptr->query_params_.reset(params_ptr);
   return ZVEC_OK;
 }
 
