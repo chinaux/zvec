@@ -1141,7 +1141,7 @@ class TestCollectionQuery:
     ):
         """Test multi-vector query with Weighted reranker on multiple dense vectors."""
         weights = {"dense": 0.6, "dense2": 0.4}
-        reranker = WeightedReRanker(topn=10, metric=MetricType.L2, weights=weights)
+        reranker = WeightedReRanker(topn=10, metric=MetricType.IP, weights=weights)
         result = collection_with_multiple_docs.query(
             [
                 Query(field_name="dense", vector=multiple_docs[0].vector("dense")),

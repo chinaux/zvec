@@ -20,7 +20,7 @@ from typing import Optional, Union, final
 
 import numpy as np
 from _zvec import _Collection, _MultiVectorQuery
-from _zvec.param import _VectorQuery
+from _zvec.param import _SubVectorQuery, _VectorQuery
 
 from ..extension import ReRanker, RrfReRanker, WeightedReRanker
 from ..model.convert import convert_to_py_doc
@@ -303,7 +303,9 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
             cpp_reranker = ctx.reranker._get_object()
             if cpp_reranker is not None:
                 mvq = _MultiVectorQuery()
-                mvq.queries = query_vectors
+                mvq.queries = [
+                    self._to_sub_vector_query(vq) for vq in query_vectors
+                ]
                 mvq.topk = ctx.topk
                 if ctx.filter:
                     mvq.filter = ctx.filter
@@ -323,6 +325,10 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
         self, vectors: list[_VectorQuery], collection: _Collection
     ) -> dict[str, list[Doc]]:
         return super()._do_execute(vectors, collection)
+
+    @staticmethod
+    def _to_sub_vector_query(vq: _VectorQuery) -> _SubVectorQuery:
+        return _SubVectorQuery.from_vector_query(vq)
 
 
 class QueryExecutorFactory:

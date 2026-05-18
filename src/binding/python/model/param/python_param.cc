@@ -1373,6 +1373,27 @@ Args:
 }
 
 void ZVecPyParams::bind_vector_query(py::module_ &m) {
+  // Bind SubVectorQuery (used by MultiVectorQuery)
+  py::class_<SubVectorQuery>(m, "_SubVectorQuery")
+      .def(py::init<>())
+      .def_readwrite("num_candidates", &SubVectorQuery::num_candidates_)
+      .def_readwrite("field_name", &SubVectorQuery::field_name_)
+      .def_readwrite("query_params", &SubVectorQuery::query_params_)
+      .def_static(
+          "from_vector_query",
+          [](const VectorQuery &vq) {
+            SubVectorQuery sub;
+            sub.num_candidates_ = vq.topk_;
+            sub.field_name_ = vq.field_name_;
+            sub.query_vector_ = vq.query_vector_;
+            sub.query_sparse_indices_ = vq.query_sparse_indices_;
+            sub.query_sparse_values_ = vq.query_sparse_values_;
+            sub.query_params_ = vq.query_params_;
+            return sub;
+          },
+          py::arg("vector_query"),
+          "Create a SubVectorQuery from a VectorQuery");
+
   py::class_<VectorQuery>(m, "_VectorQuery")
       .def(py::init<>())
       // properties
