@@ -19,6 +19,7 @@
 #include <vector>
 #include <zvec/db/doc.h>
 #include <zvec/db/query_params.h>
+#include <zvec/db/reranker.h>
 
 namespace zvec {
 
@@ -57,12 +58,11 @@ struct GroupByVectorQuery {
 
 //! Multi-vector query structure for querying multiple vector fields
 //! with optional re-ranking of combined results.
-class Reranker;  // forward declaration
 
 struct SubVectorQuery {
   int num_candidates_;
   std::string field_name_;
-  std::string query_vector_;  // fp16, void *
+  std::string query_vector_;
   std::string query_sparse_indices_;
   std::string query_sparse_values_;
   QueryParams::Ptr query_params_;
