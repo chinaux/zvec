@@ -5345,18 +5345,18 @@ zvec_error_code_t zvec_group_by_vector_query_set_flat_params(
 // Reranker Implementation
 // =============================================================================
 
-zvec_reranker_t *zvec_reranker_create_rrf(int topn, int rank_constant) {
+zvec_reranker_t *zvec_reranker_create_rrf(int rank_constant) {
   ZVEC_TRY_RETURN_NULL("Failed to create RRF Reranker",
                        auto *reranker =
                            new zvec::Reranker::Ptr(
                                std::make_shared<zvec::RrfReRanker>(
-                                   topn, rank_constant));
+                                   rank_constant));
                        return reinterpret_cast<zvec_reranker_t *>(reranker);)
   return nullptr;
 }
 
 zvec_reranker_t *zvec_reranker_create_weighted(
-    int topn, int metric, const char **fields, const double *weights,
+    int metric, const char **fields, const double *weights,
     size_t weight_count) {
   if ((!fields || !weights) && weight_count > 0) {
     set_last_error("Fields and weights pointers cannot be null when "
@@ -5377,7 +5377,7 @@ zvec_reranker_t *zvec_reranker_create_weighted(
 
       auto *reranker = new zvec::Reranker::Ptr(
           std::make_shared<zvec::WeightedReRanker>(
-              topn, static_cast<zvec::MetricType>(metric), weight_map));
+              static_cast<zvec::MetricType>(metric), weight_map));
       return reinterpret_cast<zvec_reranker_t *>(reranker);)
   return nullptr;
 }
@@ -5386,12 +5386,6 @@ void zvec_reranker_destroy(zvec_reranker_t *reranker) {
   if (reranker) {
     delete reinterpret_cast<zvec::Reranker::Ptr *>(reranker);
   }
-}
-
-int zvec_reranker_get_topn(const zvec_reranker_t *reranker) {
-  if (!reranker) return 0;
-  auto *ptr = reinterpret_cast<const zvec::Reranker::Ptr *>(reranker);
-  return (*ptr)->topn();
 }
 
 int zvec_reranker_get_rank_constant(const zvec_reranker_t *reranker) {

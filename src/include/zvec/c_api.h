@@ -1734,23 +1734,22 @@ zvec_group_by_vector_query_set_flat_params(
 
 /**
  * @brief Create an RRF (Reciprocal Rank Fusion) reranker
- * @param topn Maximum number of results to return after re-ranking
  * @param rank_constant RRF rank constant (default: 60)
  * @return zvec_reranker_t* Pointer to the newly created reranker
  */
 ZVEC_EXPORT zvec_reranker_t *ZVEC_CALL
-zvec_reranker_create_rrf(int topn, int rank_constant);
+zvec_reranker_create_rrf(int rank_constant);
 
 /**
  * @brief Create a Weighted reranker
- * @param topn Maximum number of results to return after re-ranking
  * @param metric Metric type: 0=L2, 1=IP, 2=COSINE
- * @param weights Array of field name and weight pairs (field1, weight1, ...)
- * @param weight_count Number of weight pairs (must be even)
+ * @param fields Array of field names
+ * @param weights Array of weights corresponding to fields
+ * @param weight_count Number of field/weight pairs
  * @return zvec_reranker_t* Pointer to the newly created reranker
  */
 ZVEC_EXPORT zvec_reranker_t *ZVEC_CALL
-zvec_reranker_create_weighted(int topn, int metric, const char **fields,
+zvec_reranker_create_weighted(int metric, const char **fields,
                               const double *weights, size_t weight_count);
 
 /**
@@ -1758,14 +1757,6 @@ zvec_reranker_create_weighted(int topn, int metric, const char **fields,
  * @param reranker Reranker pointer
  */
 ZVEC_EXPORT void ZVEC_CALL zvec_reranker_destroy(zvec_reranker_t *reranker);
-
-/**
- * @brief Get reranker topn
- * @param reranker Reranker pointer
- * @return int TopN value
- */
-ZVEC_EXPORT int ZVEC_CALL
-zvec_reranker_get_topn(const zvec_reranker_t *reranker);
 
 /**
  * @brief Get RRF rank constant (only valid for RRF reranker)

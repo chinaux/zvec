@@ -25,7 +25,7 @@ namespace zvec {
 // ==================== RrfReRanker ====================
 
 DocPtrList RrfReRanker::rerank(
-    const std::map<std::string, DocPtrList> &query_results) const {
+    const std::map<std::string, DocPtrList> &query_results, int topn) const {
   // doc_id -> cumulative RRF score
   std::unordered_map<std::string, double> rrf_scores;
   // doc_id -> first-seen Doc pointer
@@ -52,7 +52,7 @@ DocPtrList RrfReRanker::rerank(
   std::priority_queue<ScorePair, std::vector<ScorePair>, decltype(cmp)> pq(cmp);
 
   for (const auto &[doc_id, score] : rrf_scores) {
-    if (static_cast<int>(pq.size()) < topn_) {
+    if (static_cast<int>(pq.size()) < topn) {
       pq.emplace(doc_id, score);
     } else if (score > pq.top().second) {
       pq.pop();
@@ -76,9 +76,9 @@ DocPtrList RrfReRanker::rerank(
 
 // ==================== WeightedReRanker ====================
 
-WeightedReRanker::WeightedReRanker(int topn, MetricType metric,
+WeightedReRanker::WeightedReRanker(MetricType metric,
                                    const std::map<std::string, double> &weights)
-    : Reranker(topn), metric_(metric), weights_(weights) {}
+    : metric_(metric), weights_(weights) {}
 
 double WeightedReRanker::normalize_score(double score, MetricType metric) {
   switch (metric) {
@@ -94,7 +94,7 @@ double WeightedReRanker::normalize_score(double score, MetricType metric) {
 }
 
 DocPtrList WeightedReRanker::rerank(
-    const std::map<std::string, DocPtrList> &query_results) const {
+    const std::map<std::string, DocPtrList> &query_results, int topn) const {
   // doc_id -> cumulative weighted score
   std::unordered_map<std::string, double> weighted_scores;
   // doc_id -> first-seen Doc pointer
@@ -125,7 +125,7 @@ DocPtrList WeightedReRanker::rerank(
   std::priority_queue<ScorePair, std::vector<ScorePair>, decltype(cmp)> pq(cmp);
 
   for (const auto &[doc_id, score] : weighted_scores) {
-    if (static_cast<int>(pq.size()) < topn_) {
+    if (static_cast<int>(pq.size()) < topn) {
       pq.emplace(doc_id, score);
     } else if (score > pq.top().second) {
       pq.pop();

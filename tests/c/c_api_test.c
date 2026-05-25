@@ -4131,19 +4131,17 @@ void test_reranker_functions(void) {
   TEST_START();
 
   // Test 1: Create RRF reranker
-  zvec_reranker_t *rrf = zvec_reranker_create_rrf(10, 60);
+  zvec_reranker_t *rrf = zvec_reranker_create_rrf(60);
   TEST_ASSERT(rrf != NULL);
   if (rrf) {
-    TEST_ASSERT(zvec_reranker_get_topn(rrf) == 10);
     TEST_ASSERT(zvec_reranker_get_rank_constant(rrf) == 60);
     zvec_reranker_destroy(rrf);
   }
 
-  // Test 2: Create RRF reranker with different params
-  zvec_reranker_t *rrf2 = zvec_reranker_create_rrf(5, 100);
+  // Test 2: Create RRF reranker with different rank constant
+  zvec_reranker_t *rrf2 = zvec_reranker_create_rrf(100);
   TEST_ASSERT(rrf2 != NULL);
   if (rrf2) {
-    TEST_ASSERT(zvec_reranker_get_topn(rrf2) == 5);
     TEST_ASSERT(zvec_reranker_get_rank_constant(rrf2) == 100);
     zvec_reranker_destroy(rrf2);
   }
@@ -4152,25 +4150,21 @@ void test_reranker_functions(void) {
   const char *fields[] = {"embedding1", "embedding2"};
   double weights[] = {0.7, 0.3};
   zvec_reranker_t *weighted =
-      zvec_reranker_create_weighted(10, 0, fields, weights, 2);
+      zvec_reranker_create_weighted(0, fields, weights, 2);
   TEST_ASSERT(weighted != NULL);
   if (weighted) {
-    TEST_ASSERT(zvec_reranker_get_topn(weighted) == 10);
     TEST_ASSERT(zvec_reranker_get_rank_constant(weighted) == -1);
     zvec_reranker_destroy(weighted);
   }
 
   // Test 4: Create Weighted reranker with no weights
-  zvec_reranker_t *weighted2 =
-      zvec_reranker_create_weighted(20, 2, NULL, NULL, 0);
+  zvec_reranker_t *weighted2 = zvec_reranker_create_weighted(2, NULL, NULL, 0);
   TEST_ASSERT(weighted2 != NULL);
   if (weighted2) {
-    TEST_ASSERT(zvec_reranker_get_topn(weighted2) == 20);
     zvec_reranker_destroy(weighted2);
   }
 
   // Test 5: NULL reranker operations
-  TEST_ASSERT(zvec_reranker_get_topn(NULL) == 0);
   TEST_ASSERT(zvec_reranker_get_rank_constant(NULL) == -1);
   zvec_reranker_destroy(NULL);  // Should not crash
 
@@ -4239,25 +4233,33 @@ void test_multi_vector_query_with_reranker(void) {
                                     &(int64_t){i + 1}, sizeof(int64_t));
       }
 
-      zvec_doc_add_field_by_value(docs[0], "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32,
-                                  e1_v1, sizeof(e1_v1));
-      zvec_doc_add_field_by_value(docs[0], "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32,
-                                  e2_v1, sizeof(e2_v1));
+      zvec_doc_add_field_by_value(docs[0], "embedding1",
+                                  ZVEC_DATA_TYPE_VECTOR_FP32, e1_v1,
+                                  sizeof(e1_v1));
+      zvec_doc_add_field_by_value(docs[0], "embedding2",
+                                  ZVEC_DATA_TYPE_VECTOR_FP32, e2_v1,
+                                  sizeof(e2_v1));
 
-      zvec_doc_add_field_by_value(docs[1], "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32,
-                                  e1_v2, sizeof(e1_v2));
-      zvec_doc_add_field_by_value(docs[1], "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32,
-                                  e2_v2, sizeof(e2_v2));
+      zvec_doc_add_field_by_value(docs[1], "embedding1",
+                                  ZVEC_DATA_TYPE_VECTOR_FP32, e1_v2,
+                                  sizeof(e1_v2));
+      zvec_doc_add_field_by_value(docs[1], "embedding2",
+                                  ZVEC_DATA_TYPE_VECTOR_FP32, e2_v2,
+                                  sizeof(e2_v2));
 
-      zvec_doc_add_field_by_value(docs[2], "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32,
-                                  e1_v3, sizeof(e1_v3));
-      zvec_doc_add_field_by_value(docs[2], "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32,
-                                  e2_v3, sizeof(e2_v3));
+      zvec_doc_add_field_by_value(docs[2], "embedding1",
+                                  ZVEC_DATA_TYPE_VECTOR_FP32, e1_v3,
+                                  sizeof(e1_v3));
+      zvec_doc_add_field_by_value(docs[2], "embedding2",
+                                  ZVEC_DATA_TYPE_VECTOR_FP32, e2_v3,
+                                  sizeof(e2_v3));
 
-      zvec_doc_add_field_by_value(docs[3], "embedding1", ZVEC_DATA_TYPE_VECTOR_FP32,
-                                  e1_v4, sizeof(e1_v4));
-      zvec_doc_add_field_by_value(docs[3], "embedding2", ZVEC_DATA_TYPE_VECTOR_FP32,
-                                  e2_v4, sizeof(e2_v4));
+      zvec_doc_add_field_by_value(docs[3], "embedding1",
+                                  ZVEC_DATA_TYPE_VECTOR_FP32, e1_v4,
+                                  sizeof(e1_v4));
+      zvec_doc_add_field_by_value(docs[3], "embedding2",
+                                  ZVEC_DATA_TYPE_VECTOR_FP32, e2_v4,
+                                  sizeof(e2_v4));
 
       size_t success_count, error_count;
       err = zvec_collection_insert(collection, (const zvec_doc_t **)docs, 4,
@@ -4268,7 +4270,7 @@ void test_multi_vector_query_with_reranker(void) {
       zvec_collection_flush(collection);
 
       // Test 1: MultiQuery with RRF reranker
-      zvec_reranker_t *rrf = zvec_reranker_create_rrf(3, 60);
+      zvec_reranker_t *rrf = zvec_reranker_create_rrf(60);
       TEST_ASSERT(rrf != NULL);
 
       zvec_multi_vector_query_t *mvq = zvec_multi_vector_query_create();
@@ -4300,7 +4302,8 @@ void test_multi_vector_query_with_reranker(void) {
       // Execute multi query
       zvec_doc_t **results = NULL;
       size_t result_count = 0;
-      err = zvec_collection_multi_query(collection, mvq, &results, &result_count);
+      err =
+          zvec_collection_multi_query(collection, mvq, &results, &result_count);
       TEST_ASSERT(err == ZVEC_OK);
       TEST_ASSERT(results != NULL);
       TEST_ASSERT(result_count > 0);
@@ -4321,7 +4324,8 @@ void test_multi_vector_query_with_reranker(void) {
       TEST_ASSERT(zvec_multi_vector_query_get_topk(mvq2) == 5);
 
       zvec_multi_vector_query_set_filter(mvq2, "id > 1");
-      TEST_ASSERT(strcmp(zvec_multi_vector_query_get_filter(mvq2), "id > 1") == 0);
+      TEST_ASSERT(strcmp(zvec_multi_vector_query_get_filter(mvq2), "id > 1") ==
+                  0);
 
       zvec_multi_vector_query_set_include_vector(mvq2, true);
       TEST_ASSERT(zvec_multi_vector_query_get_include_vector(mvq2) == true);
@@ -4331,7 +4335,7 @@ void test_multi_vector_query_with_reranker(void) {
       const char **got_fields = NULL;
       size_t field_count = 0;
       err = zvec_multi_vector_query_get_output_fields(mvq2, &got_fields,
-                                                       &field_count);
+                                                      &field_count);
       TEST_ASSERT(err == ZVEC_OK);
       TEST_ASSERT(field_count == 1);
       if (field_count > 0) {

@@ -54,7 +54,7 @@ class RrfReRanker(RerankFunction):
         super().__init__(topn=topn, rerank_field=rerank_field)
         self._rank_constant = rank_constant
         # Use C++ implementation for performance
-        self._cpp_reranker = _RrfReRanker(topn, rank_constant)
+        self._cpp_reranker = _RrfReRanker(rank_constant)
 
     @property
     def rank_constant(self) -> int:
@@ -130,7 +130,7 @@ class WeightedReRanker(RerankFunction):
         self._weights = weights or {}
         self._metric = metric
         # Use C++ implementation for performance
-        self._cpp_reranker = _WeightedReRanker(topn, metric, self._weights)
+        self._cpp_reranker = _WeightedReRanker(metric, self._weights)
 
     @property
     def weights(self) -> dict[str, float]:

@@ -21,24 +21,20 @@ namespace zvec {
 
 void ZVecPyReranker::Initialize(py::module_ &m) {
   // Bind Reranker base class (abstract, cannot be instantiated directly)
-  py::class_<Reranker, Reranker::Ptr>(m, "_Reranker")
-      .def_property_readonly("topn", &Reranker::topn);
+  py::class_<Reranker, Reranker::Ptr>(m, "_Reranker");
 
   // Bind RrfReRanker
   py::class_<RrfReRanker, Reranker, std::shared_ptr<RrfReRanker>>(
       m, "_RrfReRanker")
-      .def(py::init<int, int>(), py::arg("topn") = 10,
-           py::arg("rank_constant") = 60)
-      .def_property_readonly("topn", &RrfReRanker::topn)
+      .def(py::init<int>(), py::arg("rank_constant") = 60)
       .def_property_readonly("rank_constant", &RrfReRanker::rank_constant);
 
   // Bind WeightedReRanker
   py::class_<WeightedReRanker, Reranker, std::shared_ptr<WeightedReRanker>>(
       m, "_WeightedReRanker")
-      .def(py::init<int, MetricType, std::map<std::string, double>>(),
-           py::arg("topn") = 10, py::arg("metric") = MetricType::L2,
+      .def(py::init<MetricType, std::map<std::string, double>>(),
+           py::arg("metric") = MetricType::L2,
            py::arg("weights") = std::map<std::string, double>{})
-      .def_property_readonly("topn", &WeightedReRanker::topn)
       .def_property_readonly("metric", &WeightedReRanker::metric)
       .def_property_readonly("weights", &WeightedReRanker::weights);
 

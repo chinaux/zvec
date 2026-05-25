@@ -27,7 +27,7 @@ using namespace zvec;
 namespace {
 
 //! Helper to create a Doc::Ptr with given id and score
-Doc::Ptr MakeDoc(const std::string& id, float score) {
+Doc::Ptr MakeDoc(const std::string &id, float score) {
   auto doc = std::make_shared<Doc>();
   doc->set_pk(id);
   doc->set_score(score);
@@ -39,7 +39,7 @@ Doc::Ptr MakeDoc(const std::string& id, float score) {
 // ==================== RrfReRanker Tests ====================
 
 TEST(RrfReRankerTest, BasicRRF) {
-  RrfReRanker reranker(/*topn=*/10, /*rank_constant=*/60);
+  RrfReRanker reranker(/*rank_constant=*/60);
 
   // Two vector fields, each returning 3 documents with some overlap
   std::map<std::string, DocPtrList> query_results;
@@ -48,7 +48,7 @@ TEST(RrfReRankerTest, BasicRRF) {
   query_results["vec2"] = {MakeDoc("b", 0.95f), MakeDoc("a", 0.85f),
                            MakeDoc("d", 0.75f)};
 
-  auto results = reranker.rerank(query_results);
+  auto results = reranker.rerank(query_results, /*topn=*/10);
 
   // "a" appears at rank 0 in vec1 and rank 1 in vec2:
   //   rrf_score = 1/(60+0+1) + 1/(60+1+1) = 1/61 + 1/62
@@ -65,18 +65,18 @@ TEST(RrfReRankerTest, BasicRRF) {
 }
 
 TEST(RrfReRankerTest, Topn) {
-  RrfReRanker reranker(/*topn=*/2, /*rank_constant=*/60);
+  RrfReRanker reranker(/*rank_constant=*/60);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.9f), MakeDoc("b", 0.8f),
                            MakeDoc("c", 0.7f)};
 
-  auto results = reranker.rerank(query_results);
+  auto results = reranker.rerank(query_results, /*topn=*/2);
   ASSERT_EQ(results.size(), 2u);
 }
 
 TEST(RrfReRankerTest, SingleField) {
-  RrfReRanker reranker(/*topn=*/10, /*rank_constant=*/60);
+  RrfReRanker reranker(/*rank_constant=*/60);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.9f), MakeDoc("b", 0.8f)};
@@ -88,7 +88,7 @@ TEST(RrfReRankerTest, SingleField) {
 }
 
 TEST(RrfReRankerTest, EmptyResults) {
-  RrfReRanker reranker(/*topn=*/10, /*rank_constant=*/60);
+  RrfReRanker reranker(/*rank_constant=*/60);
 
   std::map<std::string, DocPtrList> query_results;
   auto results = reranker.rerank(query_results);
@@ -98,8 +98,7 @@ TEST(RrfReRankerTest, EmptyResults) {
 // ==================== WeightedReRanker Tests ====================
 
 TEST(WeightedReRankerTest, BasicWeighted) {
-  WeightedReRanker reranker(/*topn=*/10, MetricType::L2,
-                            {{"vec1", 0.7}, {"vec2", 0.3}});
+  WeightedReRanker reranker(MetricType::L2, {{"vec1", 0.7}, {"vec2", 0.3}});
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.5f), MakeDoc("b", 0.3f)};
@@ -143,13 +142,13 @@ TEST(WeightedReRankerTest, NormalizeCosine) {
 }
 
 TEST(WeightedReRankerTest, Topn) {
-  WeightedReRanker reranker(/*topn=*/2, MetricType::L2, {});
+  WeightedReRanker reranker(MetricType::L2, {});
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.1f), MakeDoc("b", 0.2f),
                            MakeDoc("c", 0.3f)};
 
-  auto results = reranker.rerank(query_results);
+  auto results = reranker.rerank(query_results, /*topn=*/2);
   ASSERT_EQ(results.size(), 2u);
 }
 
@@ -161,29 +160,34 @@ TEST(WeightedReRankerTest, UnsupportedMetric) {
 // ==================== CallbackReRanker Tests ====================
 
 TEST(CallbackReRankerTest, BasicCallback) {
-  // Simple callback that returns docs sorted by score descending
+  // Simple callback that returns docs sorted by score descending, limited to
+  // topn
   CallbackReRanker::Callback cb =
-      [](const std::map<std::string, DocPtrList>& query_results) -> DocPtrList {
+      [](const std::map<std::string, DocPtrList> &query_results,
+         int topn) -> DocPtrList {
     DocPtrList all_docs;
-    for (const auto& [_, docs] : query_results) {
-      for (const auto& doc : docs) {
+    for (const auto &[_, docs] : query_results) {
+      for (const auto &doc : docs) {
         all_docs.push_back(doc);
       }
     }
     std::sort(all_docs.begin(), all_docs.end(),
-              [](const Doc::Ptr& a, const Doc::Ptr& b) {
+              [](const Doc::Ptr &a, const Doc::Ptr &b) {
                 return a->score() > b->score();
               });
+    if (static_cast<int>(all_docs.size()) > topn) {
+      all_docs.resize(topn);
+    }
     return all_docs;
   };
 
-  CallbackReRanker reranker(cb, /*topn=*/10);
+  CallbackReRanker reranker(cb);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.5f), MakeDoc("b", 0.9f)};
   query_results["vec2"] = {MakeDoc("c", 0.7f)};
 
-  auto results = reranker.rerank(query_results);
+  auto results = reranker.rerank(query_results, /*topn=*/10);
   ASSERT_EQ(results.size(), 3u);
   // Should be sorted by score descending
   EXPECT_EQ(results[0]->pk(), "b");

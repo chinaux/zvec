@@ -1617,9 +1617,6 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
         Status::InvalidArgument("Reranker is required for multi-vector query"));
   }
 
-  // Use query.topk as reranker's topn
-  query.reranker->set_topn(query.topk);
-
   // If WeightedReRanker, verify metric consistency with field schemas
   auto *weighted = dynamic_cast<WeightedReRanker *>(query.reranker.get());
   if (weighted) {
@@ -1693,7 +1690,7 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
   }
 
   // Merge and rerank results
-  return query.reranker->rerank(query_results);
+  return query.reranker->rerank(query_results, query.topk);
 }
 
 Result<GroupResults> CollectionImpl::GroupByQuery(
