@@ -336,6 +336,55 @@ class TestCollectionFetch:
         assert doc_multi.has_field("float_field")
         assert not doc_multi.has_field("string_field")
 
+    @pytest.mark.parametrize("doc_num", [3])
+    def test_fetch_with_include_vector(self, full_collection: Collection, doc_num):
+        """Test that fetch respects include_vector parameter."""
+        multiple_docs = [
+            generate_doc(i, full_collection.schema) for i in range(doc_num)
+        ]
+        result = full_collection.insert(multiple_docs)
+        for item in result:
+            assert item.ok(), f"Insert failed: {item.code()}"
+
+        doc_id = multiple_docs[0].id
+
+        # Case 1: include_vector=True (default) -> vector data returned
+        fetched_with_vec = full_collection.fetch(ids=[doc_id])
+        assert doc_id in fetched_with_vec
+        doc_with_vec = fetched_with_vec[doc_id]
+        assert doc_with_vec is not None
+        assert doc_with_vec.has_field("int32_field"), (
+            "scalar fields should still be present"
+        )
+        assert doc_with_vec.vector("vector_fp32_field"), (
+            "vector should be present when include_vector=True (default)"
+        )
+
+        # Case 2: include_vector=False -> no vector data returned
+        fetched_no_vec = full_collection.fetch(ids=[doc_id], include_vector=False)
+        assert doc_id in fetched_no_vec
+        doc_no_vec = fetched_no_vec[doc_id]
+        assert doc_no_vec is not None
+        assert doc_no_vec.has_field("int32_field"), (
+            "scalar fields should still be present"
+        )
+        assert not doc_no_vec.vector("vector_fp32_field"), (
+            "vector should not be present when include_vector=False"
+        )
+
+        # Case 3: include_vector=False with output_fields
+        fetched_combo = full_collection.fetch(
+            ids=[doc_id], output_fields=["int32_field"], include_vector=False
+        )
+        assert doc_id in fetched_combo
+        doc_combo = fetched_combo[doc_id]
+        assert doc_combo is not None
+        assert doc_combo.has_field("int32_field")
+        assert not doc_combo.has_field("string_field")
+        assert not doc_combo.vector("vector_fp32_field"), (
+            "vector should not be present when include_vector=False"
+        )
+
 
 class TestCollectionQuery:
     @pytest.mark.parametrize("doc_num", [5])

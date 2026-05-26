@@ -104,7 +104,8 @@ class Collection {
 
   virtual Result<DocPtrMap> Fetch(const std::vector<std::string> &pks,
                                   const std::optional<std::vector<std::string>>
-                                      &output_fields = std::nullopt) const = 0;
+                                      &output_fields = std::nullopt,
+                                  bool include_vector = true) const = 0;
 
  public:
   //! Debug-only: retrieve the storage mode string of an HNSW index on the

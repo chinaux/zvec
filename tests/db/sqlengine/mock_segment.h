@@ -484,7 +484,8 @@ class MockSegment : public Segment {
 
   Doc::Ptr Fetch(uint64_t doc_id,
                  const std::optional<std::vector<std::string>> &output_fields =
-                     std::nullopt) override {
+                     std::nullopt,
+                 bool include_vector = true) override {
     return nullptr;
   }
 

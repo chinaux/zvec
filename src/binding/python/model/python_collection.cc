@@ -274,16 +274,18 @@ void ZVecPyCollection::bind_dql_methods(
       .def(
           "Fetch",
           [](const Collection &self, const std::vector<std::string> &pks,
-             const std::optional<std::vector<std::string>> &output_fields) {
+             const std::optional<std::vector<std::string>> &output_fields,
+             bool include_vector) {
             Result<DocPtrMap> result;
             {
               py::gil_scoped_release release;
-              result = self.Fetch(pks, output_fields);
+              result = self.Fetch(pks, output_fields, include_vector);
             }
             // return DocPtrMap
             return unwrap_expected(result);
           },
-          py::arg("pks"), py::arg("output_fields") = py::none())
+          py::arg("pks"), py::arg("output_fields") = py::none(),
+          py::arg("include_vector") = true)
       .def(
           "_debug_hnsw_storage_mode",
           [](const Collection &self, const std::string &column_name) {

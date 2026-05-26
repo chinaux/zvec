@@ -122,7 +122,8 @@ class CollectionImpl : public Collection {
 
   Result<DocPtrMap> Fetch(const std::vector<std::string> &pks,
                           const std::optional<std::vector<std::string>>
-                              &output_fields = std::nullopt) const override;
+                              &output_fields = std::nullopt,
+                          bool include_vector = true) const override;
 
   Result<std::string> DebugGetHnswStorageMode(
       const std::string &column_name) const override;
@@ -1409,7 +1410,7 @@ Status CollectionImpl::internal_fetch_by_doc(const Doc &doc,
     return Status::InternalError("Segment not found");
   }
 
-  auto old_doc = segment->Fetch(doc_id);
+  auto old_doc = segment->Fetch(doc_id, std::nullopt, true);
   if (!old_doc) {
     LOG_WARN("doc_id: %zu fetch doc failed", (size_t)doc_id);
     return Status::InternalError("Fetch doc failed");
@@ -1612,7 +1613,8 @@ Result<GroupResults> CollectionImpl::GroupByQuery(
 
 Result<DocPtrMap> CollectionImpl::Fetch(
     const std::vector<std::string> &pks,
-    const std::optional<std::vector<std::string>> &output_fields) const {
+    const std::optional<std::vector<std::string>> &output_fields,
+    bool include_vector) const {
   std::shared_lock lock(schema_handle_mtx_);
 
   CHECK_DESTROY_RETURN_STATUS_EXPECTED(destroyed_, false);
@@ -1638,7 +1640,7 @@ Result<DocPtrMap> CollectionImpl::Fetch(
       results.insert({pk, nullptr});
       continue;
     }
-    results.insert({pk, segment->Fetch(doc_id, output_fields)});
+    results.insert({pk, segment->Fetch(doc_id, output_fields, include_vector)});
   }
 
   return results;

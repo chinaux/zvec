@@ -3975,7 +3975,7 @@ void test_collection_nullable_roundtrip(void) {
       const char *pks[] = {"pk_nullable"};
       zvec_doc_t **fetched = NULL;
       size_t fetched_count = 0;
-      err = zvec_collection_fetch(collection, pks, 1, NULL, 0, &fetched,
+      err = zvec_collection_fetch(collection, pks, 1, NULL, 0, false, &fetched,
                                   &fetched_count);
       TEST_ASSERT(err == ZVEC_OK);
       TEST_ASSERT(fetched_count == 1);
@@ -4694,7 +4694,7 @@ void test_collection_query_functions(void) {
     const char *pks[] = {"doc1", "doc2"};
     zvec_doc_t **results = NULL;
     size_t found_count = 0;
-    err = zvec_collection_fetch(collection, pks, 2, NULL, 0, &results,
+    err = zvec_collection_fetch(collection, pks, 2, NULL, 0, false, &results,
                                 &found_count);
     TEST_ASSERT(err == ZVEC_OK);
     TEST_ASSERT(found_count == 2);
@@ -4709,7 +4709,7 @@ void test_collection_query_functions(void) {
     zvec_doc_t **results_partial = NULL;
     size_t found_count_partial = 0;
     const char *output_fields[] = {"name"};
-    err = zvec_collection_fetch(collection, pks, 2, output_fields, 1,
+    err = zvec_collection_fetch(collection, pks, 2, output_fields, 1, false,
                                 &results_partial, &found_count_partial);
     TEST_ASSERT(err == ZVEC_OK);
     TEST_ASSERT(found_count_partial == 2);
@@ -4723,10 +4723,19 @@ void test_collection_query_functions(void) {
     // Test zvec_collection_fetch with empty output_fields (no scalar fields)
     zvec_doc_t **results_empty_fields = NULL;
     size_t found_count_empty = 0;
-    err = zvec_collection_fetch(collection, pks, 2, NULL, 0,
+    err = zvec_collection_fetch(collection, pks, 2, NULL, 0, false,
                                 &results_empty_fields, &found_count_empty);
     TEST_ASSERT(err == ZVEC_OK);
     zvec_docs_free(results_empty_fields, found_count_empty);
+
+    // Test zvec_collection_fetch with include_vector=true
+    zvec_doc_t **results_with_vec = NULL;
+    size_t found_count_vec = 0;
+    err = zvec_collection_fetch(collection, pks, 2, NULL, 0, true,
+                                &results_with_vec, &found_count_vec);
+    TEST_ASSERT(err == ZVEC_OK);
+    TEST_ASSERT(found_count_vec == 2);
+    zvec_docs_free(results_with_vec, found_count_vec);
 
     // Test zvec_collection_get_options
     zvec_collection_options_t *options = NULL;

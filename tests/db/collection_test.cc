@@ -5078,5 +5078,40 @@ TEST_F(CollectionTest, Feature_Fetch_OutputFields) {
     ASSERT_FALSE(doc->has("nonexistent_field"));
   }
 
+  // Case 6: include_vector = false (default) -> no vector fields returned
+  {
+    auto result = collection->Fetch({pk}, std::nullopt, false);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result.value().size(), 1);
+    auto doc = result.value()[pk];
+    ASSERT_NE(doc, nullptr);
+    ASSERT_TRUE(doc->has("int32"));
+    ASSERT_FALSE(doc->has("dense_fp32"));
+  }
+
+  // Case 7: include_vector = true -> vector fields returned
+  {
+    auto result = collection->Fetch({pk}, std::nullopt, true);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result.value().size(), 1);
+    auto doc = result.value()[pk];
+    ASSERT_NE(doc, nullptr);
+    ASSERT_TRUE(doc->has("int32"));
+    ASSERT_TRUE(doc->has("dense_fp32"));
+  }
+
+  // Case 8: include_vector = true with output_fields
+  {
+    auto result =
+        collection->Fetch({pk}, std::vector<std::string>{"int32"}, true);
+    ASSERT_TRUE(result.has_value());
+    ASSERT_EQ(result.value().size(), 1);
+    auto doc = result.value()[pk];
+    ASSERT_NE(doc, nullptr);
+    ASSERT_TRUE(doc->has("int32"));
+    ASSERT_FALSE(doc->has("string"));
+    ASSERT_TRUE(doc->has("dense_fp32"));
+  }
+
   ASSERT_TRUE(collection->Destroy().ok());
 }

@@ -2654,6 +2654,7 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_query(
  * fields
  * @param output_field_count Number of output_fields entries; 0 if
  * output_fields is NULL
+ * @param include_vector Whether to include vector data in results
  * @param[out] documents Returned document array (needs to be freed by calling
  * zvec_docs_free)
  * @param[out] found_count Number of found documents
@@ -2662,7 +2663,7 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_query(
 ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_collection_fetch(
     zvec_collection_t *collection, const char *const *primary_keys,
     size_t count, const char *const *output_fields, size_t output_field_count,
-    zvec_doc_t ***documents, size_t *found_count);
+    bool include_vector, zvec_doc_t ***documents, size_t *found_count);
 
 // =============================================================================
 // Document Related Structures
