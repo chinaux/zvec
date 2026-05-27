@@ -34,6 +34,7 @@ from zvec import (
     VectorSchema,
 )
 from zvec.extension.multi_vector_reranker import (
+    CallbackReRanker,
     RrfReRanker,
     WeightedReRanker,
 )
@@ -1140,8 +1141,9 @@ class TestCollectionQuery:
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
         """Test multi-vector query with Weighted reranker on multiple dense vectors."""
+        metrics = {"dense": MetricType.IP, "dense2": MetricType.IP}
         weights = {"dense": 0.6, "dense2": 0.4}
-        reranker = WeightedReRanker(topn=10, metric=MetricType.IP, weights=weights)
+        reranker = WeightedReRanker(topn=10, metrics=metrics, weights=weights)
         result = collection_with_multiple_docs.query(
             [
                 Query(field_name="dense", vector=multiple_docs[0].vector("dense")),
@@ -1157,8 +1159,9 @@ class TestCollectionQuery:
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
         """Test multi-vector query with Weighted reranker on multiple sparse vectors."""
+        metrics = {"sparse": MetricType.IP, "sparse2": MetricType.IP}
         weights = {"sparse": 0.6, "sparse2": 0.4}
-        reranker = WeightedReRanker(topn=10, metric=MetricType.IP, weights=weights)
+        reranker = WeightedReRanker(topn=10, metrics=metrics, weights=weights)
         result = collection_with_multiple_docs.query(
             [
                 Query(field_name="sparse", vector=multiple_docs[0].vector("sparse")),
@@ -1177,8 +1180,9 @@ class TestCollectionQuery:
         self, collection_with_multiple_docs: Collection, multiple_docs
     ):
         """Test multi-vector query with Weighted reranker combining dense + sparse."""
+        metrics = {"dense": MetricType.IP, "sparse": MetricType.IP}
         weights = {"dense": 0.7, "sparse": 0.3}
-        reranker = WeightedReRanker(topn=10, metric=MetricType.IP, weights=weights)
+        reranker = WeightedReRanker(topn=10, metrics=metrics, weights=weights)
         result = collection_with_multiple_docs.query(
             [
                 Query(field_name="dense", vector=multiple_docs[0].vector("dense")),
@@ -1189,3 +1193,66 @@ class TestCollectionQuery:
         )
         assert len(result) > 0
         assert len(result) <= 10
+
+    def test_collection_query_with_callback_reranker_by_multi_dense_vector(
+        self, collection_with_multiple_docs: Collection, multiple_docs
+    ):
+        """Test multi-vector query with CallbackReRanker (Python callback via C++)."""
+        callback_invoked = []
+
+        def my_rerank_callback(query_results, topn):
+            callback_invoked.append(True)
+            all_docs = []
+            for docs in query_results.values():
+                all_docs.extend(docs)
+            seen = set()
+            unique_docs = []
+            for doc in all_docs:
+                if doc.pk() not in seen:
+                    seen.add(doc.pk())
+                    unique_docs.append(doc)
+            unique_docs.sort(key=lambda d: d.score(), reverse=True)
+            return unique_docs[:topn]
+
+        reranker = CallbackReRanker(callback=my_rerank_callback, topn=10)
+        result = collection_with_multiple_docs.query(
+            [
+                Query(field_name="dense", vector=multiple_docs[0].vector("dense")),
+                Query(field_name="dense2", vector=multiple_docs[0].vector("dense2")),
+            ],
+            topk=10,
+            reranker=reranker,
+        )
+        assert len(callback_invoked) == 1
+        assert len(result) > 0
+        assert len(result) <= 10
+
+    def test_collection_query_with_callback_reranker_by_hybrid_vector(
+        self, collection_with_multiple_docs: Collection, multiple_docs
+    ):
+        """Test multi-vector query with CallbackReRanker combining dense + sparse."""
+
+        def my_rerank_callback(query_results, topn):
+            all_docs = []
+            for docs in query_results.values():
+                all_docs.extend(docs)
+            seen = set()
+            unique_docs = []
+            for doc in all_docs:
+                if doc.pk() not in seen:
+                    seen.add(doc.pk())
+                    unique_docs.append(doc)
+            unique_docs.sort(key=lambda d: d.score(), reverse=True)
+            return unique_docs[:topn]
+
+        reranker = CallbackReRanker(callback=my_rerank_callback, topn=5)
+        result = collection_with_multiple_docs.query(
+            [
+                Query(field_name="dense", vector=multiple_docs[0].vector("dense")),
+                Query(field_name="sparse", vector=multiple_docs[0].vector("sparse")),
+            ],
+            topk=5,
+            reranker=reranker,
+        )
+        assert len(result) > 0
+        assert len(result) <= 5

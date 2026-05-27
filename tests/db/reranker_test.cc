@@ -36,10 +36,10 @@ Doc::Ptr MakeDoc(const std::string &id, float score) {
 
 }  // namespace
 
-// ==================== RrfReRanker Tests ====================
+// ==================== RrfReranker Tests ====================
 
-TEST(RrfReRankerTest, BasicRRF) {
-  RrfReRanker reranker(/*rank_constant=*/60);
+TEST(RrfRerankerTest, BasicRRF) {
+  RrfReranker reranker(/*rank_constant=*/60);
 
   // Two vector fields, each returning 3 documents with some overlap
   std::map<std::string, DocPtrList> query_results;
@@ -64,8 +64,8 @@ TEST(RrfReRankerTest, BasicRRF) {
   EXPECT_NEAR(results[0]->score(), results[1]->score(), 1e-10);
 }
 
-TEST(RrfReRankerTest, Topn) {
-  RrfReRanker reranker(/*rank_constant=*/60);
+TEST(RrfRerankerTest, Topn) {
+  RrfReranker reranker(/*rank_constant=*/60);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.9f), MakeDoc("b", 0.8f),
@@ -75,8 +75,8 @@ TEST(RrfReRankerTest, Topn) {
   ASSERT_EQ(results.size(), 2u);
 }
 
-TEST(RrfReRankerTest, SingleField) {
-  RrfReRanker reranker(/*rank_constant=*/60);
+TEST(RrfRerankerTest, SingleField) {
+  RrfReranker reranker(/*rank_constant=*/60);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.9f), MakeDoc("b", 0.8f)};
@@ -87,18 +87,20 @@ TEST(RrfReRankerTest, SingleField) {
   EXPECT_GT(results[0]->score(), results[1]->score());
 }
 
-TEST(RrfReRankerTest, EmptyResults) {
-  RrfReRanker reranker(/*rank_constant=*/60);
+TEST(RrfRerankerTest, EmptyResults) {
+  RrfReranker reranker(/*rank_constant=*/60);
 
   std::map<std::string, DocPtrList> query_results;
   auto results = reranker.rerank(query_results);
   EXPECT_TRUE(results.empty());
 }
 
-// ==================== WeightedReRanker Tests ====================
+// ==================== WeightedReranker Tests ====================
 
-TEST(WeightedReRankerTest, BasicWeighted) {
-  WeightedReRanker reranker(MetricType::L2, {{"vec1", 0.7}, {"vec2", 0.3}});
+TEST(WeightedRerankerTest, BasicWeighted) {
+  WeightedReranker reranker(
+      {{"vec1", MetricType::L2}, {"vec2", MetricType::L2}},
+      {{"vec1", 0.7}, {"vec2", 0.3}});
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.5f), MakeDoc("b", 0.3f)};
@@ -110,39 +112,68 @@ TEST(WeightedReRankerTest, BasicWeighted) {
   EXPECT_EQ(results[0]->pk(), "a");
 }
 
-TEST(WeightedReRankerTest, NormalizeL2) {
+TEST(WeightedRerankerTest, MixedMetrics) {
+  WeightedReranker reranker(
+      {{"vec1", MetricType::L2}, {"vec2", MetricType::COSINE}},
+      {{"vec1", 0.5}, {"vec2", 0.5}});
+
+  std::map<std::string, DocPtrList> query_results;
+  query_results["vec1"] = {MakeDoc("a", 0.5f)};
+  query_results["vec2"] = {MakeDoc("a", 0.4f)};
+
+  auto results = reranker.rerank(query_results);
+  ASSERT_EQ(results.size(), 1u);
+  EXPECT_EQ(results[0]->pk(), "a");
+  // L2 normalize(0.5) * 0.5 + COSINE normalize(0.4) * 0.5
+  double expected =
+      WeightedReranker::normalize_score(0.5, MetricType::L2) * 0.5 +
+      WeightedReranker::normalize_score(0.4, MetricType::COSINE) * 0.5;
+  EXPECT_NEAR(results[0]->score(), expected, 1e-5);
+}
+
+TEST(WeightedRerankerTest, MissingMetricThrows) {
+  WeightedReranker reranker({{"vec1", MetricType::L2}}, {});
+
+  std::map<std::string, DocPtrList> query_results;
+  query_results["vec1"] = {MakeDoc("a", 0.5f)};
+  query_results["vec2"] = {MakeDoc("b", 0.3f)};
+
+  EXPECT_THROW(reranker.rerank(query_results), std::invalid_argument);
+}
+
+TEST(WeightedRerankerTest, NormalizeL2) {
   // L2: normalize_score = 1 - 2*atan(score)/pi
   // For score=0: 1 - 0 = 1.0
   // For score->inf: 1 - 2*(pi/2)/pi = 0.0
-  EXPECT_NEAR(WeightedReRanker::normalize_score(0.0, MetricType::L2), 1.0,
+  EXPECT_NEAR(WeightedReranker::normalize_score(0.0, MetricType::L2), 1.0,
               1e-10);
-  EXPECT_GT(WeightedReRanker::normalize_score(1.0, MetricType::L2), 0.0);
-  EXPECT_LT(WeightedReRanker::normalize_score(1.0, MetricType::L2), 1.0);
+  EXPECT_GT(WeightedReranker::normalize_score(1.0, MetricType::L2), 0.0);
+  EXPECT_LT(WeightedReranker::normalize_score(1.0, MetricType::L2), 1.0);
 }
 
-TEST(WeightedReRankerTest, NormalizeIP) {
+TEST(WeightedRerankerTest, NormalizeIP) {
   // IP: normalize_score = 0.5 + atan(score)/pi
   // For score=0: 0.5 + 0 = 0.5
-  EXPECT_NEAR(WeightedReRanker::normalize_score(0.0, MetricType::IP), 0.5,
+  EXPECT_NEAR(WeightedReranker::normalize_score(0.0, MetricType::IP), 0.5,
               1e-10);
-  EXPECT_GT(WeightedReRanker::normalize_score(1.0, MetricType::IP), 0.5);
+  EXPECT_GT(WeightedReranker::normalize_score(1.0, MetricType::IP), 0.5);
 }
 
-TEST(WeightedReRankerTest, NormalizeCosine) {
+TEST(WeightedRerankerTest, NormalizeCosine) {
   // COSINE: normalize_score = 1 - score/2
   // For score=0: 1 - 0 = 1.0
   // For score=1: 1 - 0.5 = 0.5
   // For score=2: 1 - 1.0 = 0.0
-  EXPECT_NEAR(WeightedReRanker::normalize_score(0.0, MetricType::COSINE), 1.0,
+  EXPECT_NEAR(WeightedReranker::normalize_score(0.0, MetricType::COSINE), 1.0,
               1e-10);
-  EXPECT_NEAR(WeightedReRanker::normalize_score(1.0, MetricType::COSINE), 0.5,
+  EXPECT_NEAR(WeightedReranker::normalize_score(1.0, MetricType::COSINE), 0.5,
               1e-10);
-  EXPECT_NEAR(WeightedReRanker::normalize_score(2.0, MetricType::COSINE), 0.0,
+  EXPECT_NEAR(WeightedReranker::normalize_score(2.0, MetricType::COSINE), 0.0,
               1e-10);
 }
 
-TEST(WeightedReRankerTest, Topn) {
-  WeightedReRanker reranker(MetricType::L2, {});
+TEST(WeightedRerankerTest, Topn) {
+  WeightedReranker reranker({{"vec1", MetricType::L2}}, {});
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.1f), MakeDoc("b", 0.2f),
@@ -152,17 +183,17 @@ TEST(WeightedReRankerTest, Topn) {
   ASSERT_EQ(results.size(), 2u);
 }
 
-TEST(WeightedReRankerTest, UnsupportedMetric) {
-  EXPECT_THROW(WeightedReRanker::normalize_score(1.0, MetricType::UNDEFINED),
+TEST(WeightedRerankerTest, UnsupportedMetric) {
+  EXPECT_THROW(WeightedReranker::normalize_score(1.0, MetricType::UNDEFINED),
                std::invalid_argument);
 }
 
-// ==================== CallbackReRanker Tests ====================
+// ==================== CallbackReranker Tests ====================
 
-TEST(CallbackReRankerTest, BasicCallback) {
+TEST(CallbackRerankerTest, BasicCallback) {
   // Simple callback that returns docs sorted by score descending, limited to
   // topn
-  CallbackReRanker::Callback cb =
+  CallbackReranker::Callback cb =
       [](const std::map<std::string, DocPtrList> &query_results,
          int topn) -> DocPtrList {
     DocPtrList all_docs;
@@ -181,7 +212,7 @@ TEST(CallbackReRankerTest, BasicCallback) {
     return all_docs;
   };
 
-  CallbackReRanker reranker(cb);
+  CallbackReranker reranker(cb);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.5f), MakeDoc("b", 0.9f)};

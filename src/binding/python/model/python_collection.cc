@@ -261,6 +261,19 @@ void ZVecPyCollection::bind_dql_methods(
             // return DocPtrList
             return unwrap_expected(result);
           })
+      // MultiQuery: multi query with optional reranker
+      .def(
+          "Query",
+          [](const Collection &self, const MultiQuery &query) {
+            Result<DocPtrList> result;
+            {
+              py::gil_scoped_release release;
+              result = self.Query(query);
+            }
+            // return DocPtrList
+            return unwrap_expected(result);
+          },
+          py::arg("query"), "Execute a multi query with optional re-ranking.")
       .def("GroupByQuery",
            [](const Collection &self, const GroupByVectorQuery &query) {
              Result<GroupResults> result;
@@ -297,16 +310,7 @@ void ZVecPyCollection::bind_dql_methods(
           "given vector column. One of 'mmap', 'buffer_pool', 'contiguous'. "
           "Raises KeyError if no HNSW index exists on the column, or "
           "ValueError if the column's index is not an HNSW index. Intended "
-          "for introspection and testing only; not part of the stable API.")
-      // MultiQuery: multi-vector query with optional reranker
-      .def(
-          "MultiQuery",
-          [](Collection &self, const MultiVectorQuery &query) {
-            const auto result = self.MultiQuery(query);
-            return unwrap_expected(result);
-          },
-          py::arg("query"),
-          "Execute a multi-vector query with optional re-ranking.");
+          "for introspection and testing only; not part of the stable API.");
 }
 
 }  // namespace zvec

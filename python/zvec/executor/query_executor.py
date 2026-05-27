@@ -19,8 +19,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional, Union, final
 
 import numpy as np
-from _zvec import _Collection, _MultiVectorQuery
-from _zvec.param import _SubVectorQuery, _VectorQuery
+from _zvec import _Collection, _MultiQuery
+from _zvec.param import _SubQuery, _VectorQuery
 
 from ..extension import ReRanker, RrfReRanker, WeightedReRanker
 from ..model.convert import convert_to_py_doc
@@ -302,8 +302,8 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
         if len(query_vectors) > 1 and ctx.reranker is not None:
             cpp_reranker = ctx.reranker._get_object()
             if cpp_reranker is not None:
-                mvq = _MultiVectorQuery()
-                mvq.queries = [self._to_sub_vector_query(vq) for vq in query_vectors]
+                mvq = _MultiQuery()
+                mvq.queries = [self._to_sub_query(vq) for vq in query_vectors]
                 mvq.topk = ctx.topk
                 if ctx.filter:
                     mvq.filter = ctx.filter
@@ -311,7 +311,7 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
                 if ctx.output_fields:
                     mvq.output_fields = ctx.output_fields
                 mvq.reranker = cpp_reranker
-                docs = collection.MultiQuery(mvq)
+                docs = collection.Query(mvq)
                 return [convert_to_py_doc(doc, self._schema) for doc in docs]
 
         # 3. execute query (fallback to Python path)
@@ -325,8 +325,8 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
         return super()._do_execute(vectors, collection)
 
     @staticmethod
-    def _to_sub_vector_query(vq: _VectorQuery) -> _SubVectorQuery:
-        return _SubVectorQuery.from_vector_query(vq)
+    def _to_sub_query(vq: _VectorQuery) -> _SubQuery:
+        return _SubQuery.from_vector_query(vq)
 
 
 class QueryExecutorFactory:

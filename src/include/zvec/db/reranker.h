@@ -40,23 +40,42 @@ class Reranker {
       int topn = 10) const = 0;
 };
 
+//! Intermediate base for rerankers that compute per-document scores.
+//!
+//! Implements the common rerank() logic: iterate docs, call rescore() for each,
+//! accumulate scores by doc_id, and return topn results in descending order.
+//! Subclasses only need to implement rescore().
+class ScoreBasedReranker : public Reranker {
+ public:
+  //! Compute the contribution score for a single document.
+  //! \param score The document's raw relevance score from the vector field.
+  //! \param rank The document's position (0-based) in the per-field result
+  //! list. \param field_name The name of the vector field this result came
+  //! from. \return The score contribution to be accumulated for this document.
+  virtual double rescore(double score, int rank,
+                         const std::string &field_name) const = 0;
+
+  DocPtrList rerank(const std::map<std::string, DocPtrList> &query_results,
+                    int topn = 10) const override;
+};
+
 //! Re-ranker using Reciprocal Rank Fusion (RRF) for multi-vector search.
 //!
 //! RRF combines results from multiple vector queries without requiring
 //! relevance scores. The RRF score for a document at rank r is:
 //!   score = 1 / (k + r + 1)
 //! where k is the rank constant.
-class RrfReRanker : public Reranker {
+class RrfReranker : public ScoreBasedReranker {
  public:
-  explicit RrfReRanker(int rank_constant = 60)
+  explicit RrfReranker(int rank_constant = 60)
       : rank_constant_(rank_constant) {}
 
   int rank_constant() const {
     return rank_constant_;
   }
 
-  DocPtrList rerank(const std::map<std::string, DocPtrList> &query_results,
-                    int topn = 10) const override;
+  double rescore(double score, int rank,
+                 const std::string &field_name) const override;
 
  private:
   int rank_constant_;
@@ -64,29 +83,29 @@ class RrfReRanker : public Reranker {
 
 //! Re-ranker that combines scores from multiple vector fields using weights.
 //!
-//! Each vector field's relevance score is normalized based on its metric type,
-//! then scaled by a user-provided weight. Final scores are summed across
+//! Each vector field's relevance score is normalized based on its own metric
+//! type, then scaled by a user-provided weight. Final scores are summed across
 //! fields. Supported metrics: L2, IP, COSINE.
-class WeightedReRanker : public Reranker {
+class WeightedReranker : public ScoreBasedReranker {
  public:
-  WeightedReRanker(MetricType metric = MetricType::L2,
+  WeightedReranker(const std::map<std::string, MetricType> &metrics = {},
                    const std::map<std::string, double> &weights = {});
 
-  MetricType metric() const {
-    return metric_;
+  const std::map<std::string, MetricType> &metrics() const {
+    return metrics_;
   }
   const std::map<std::string, double> &weights() const {
     return weights_;
   }
 
-  DocPtrList rerank(const std::map<std::string, DocPtrList> &query_results,
-                    int topn = 10) const override;
+  double rescore(double score, int rank,
+                 const std::string &field_name) const override;
 
   //! Normalize a raw distance/similarity score to [0, 1] range
   static double normalize_score(double score, MetricType metric);
 
  private:
-  MetricType metric_;
+  std::map<std::string, MetricType> metrics_;
   std::map<std::string, double> weights_;
 };
 
@@ -94,12 +113,12 @@ class WeightedReRanker : public Reranker {
 //!
 //! Wraps a user-provided callback (e.g., a Python callable) as a Reranker.
 //! When the callback is a Python function, GIL must be managed by the caller.
-class CallbackReRanker : public Reranker {
+class CallbackReranker : public Reranker {
  public:
   using Callback =
       std::function<DocPtrList(const std::map<std::string, DocPtrList> &, int)>;
 
-  explicit CallbackReRanker(Callback fn) : callback_(std::move(fn)) {}
+  explicit CallbackReranker(Callback fn) : callback_(std::move(fn)) {}
 
   DocPtrList rerank(const std::map<std::string, DocPtrList> &query_results,
                     int topn = 10) const override {

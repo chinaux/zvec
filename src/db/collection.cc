@@ -119,7 +119,7 @@ class CollectionImpl : public Collection {
 
   Result<DocPtrList> Query(const VectorQuery &query) const override;
 
-  Result<DocPtrList> MultiQuery(const MultiVectorQuery &query) const override;
+  Result<DocPtrList> Query(const MultiQuery &query) const override;
 
   Result<GroupResults> GroupByQuery(
       const GroupByVectorQuery &query) const override;
@@ -1601,42 +1601,19 @@ Result<DocPtrList> CollectionImpl::Query(const VectorQuery &query) const {
   return sql_engine_->execute(schema_, sanitized, segments);
 }
 
-Result<DocPtrList> CollectionImpl::MultiQuery(
-    const MultiVectorQuery &query) const {
+Result<DocPtrList> CollectionImpl::Query(const MultiQuery &query) const {
   std::shared_lock lock(schema_handle_mtx_);
 
   CHECK_DESTROY_RETURN_STATUS_EXPECTED(destroyed_, false);
 
   if (query.queries.size() < 2) {
     return tl::make_unexpected(
-        Status::InvalidArgument("MultiQuery requires at least 2 sub-queries"));
+        Status::InvalidArgument("Query requires at least 2 sub-queries"));
   }
 
   if (!query.reranker) {
     return tl::make_unexpected(
         Status::InvalidArgument("Reranker is required for multi-vector query"));
-  }
-
-  // If WeightedReRanker, verify metric consistency with field schemas
-  auto *weighted = dynamic_cast<WeightedReRanker *>(query.reranker.get());
-  if (weighted) {
-    for (const auto &sub : query.queries) {
-      auto *field_schema = schema_->get_vector_field(sub.field_name_);
-      if (!field_schema) {
-        return tl::make_unexpected(Status::InvalidArgument(
-            "Vector field not found: ", sub.field_name_));
-      }
-      auto *vec_params = dynamic_cast<const VectorIndexParams *>(
-          field_schema->index_params().get());
-      if (vec_params && vec_params->metric_type() != weighted->metric()) {
-        return tl::make_unexpected(Status::InvalidArgument(
-            "WeightedReRanker metric mismatch for field: ", sub.field_name_,
-            ". Reranker metric: ",
-            std::to_string(static_cast<uint32_t>(weighted->metric())),
-            ", field metric: ",
-            std::to_string(static_cast<uint32_t>(vec_params->metric_type()))));
-      }
-    }
   }
 
   // Convert SubVectorQuery to VectorQuery and validate
@@ -1659,9 +1636,10 @@ Result<DocPtrList> CollectionImpl::MultiQuery(
     VectorQuery vq;
     vq.topk_ = sub.num_candidates_;
     vq.field_name_ = sub.field_name_;
-    vq.query_vector_ = sub.query_vector_;
-    vq.query_sparse_indices_ = sub.query_sparse_indices_;
-    vq.query_sparse_values_ = sub.query_sparse_values_;
+    const auto &vec_payload = std::get<VectorQueryPayload>(sub.payload_);
+    vq.query_vector_ = vec_payload.query_vector_;
+    vq.query_sparse_indices_ = vec_payload.sparse_indices_;
+    vq.query_sparse_values_ = vec_payload.sparse_values_;
     vq.query_params_ = sub.query_params_;
     vq.filter_ = query.filter;
     vq.include_vector_ = query.include_vector;

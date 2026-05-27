@@ -876,9 +876,8 @@ class TestCollectionQuery:
         batchdoc_and_check(full_collection, multiple_docs, doc_num, operator="insert")
         doc_fields, doc_vectors = generate_vectordict_random(full_collection.schema)
 
-        weighted_reranker = WeightedReRanker(
-            topn=3, weights=weights, metric=MetricType.IP
-        )
+        metrics = {field: MetricType.IP for field in weights}
+        weighted_reranker = WeightedReRanker(topn=3, weights=weights, metrics=metrics)
 
         single_query_results = {}
         for k, v in DEFAULT_VECTOR_FIELD_NAME.items():

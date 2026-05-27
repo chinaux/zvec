@@ -16,42 +16,39 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <queue>
+#include <stdexcept>
 #include <unordered_map>
 #include <utility>
 #include <zvec/db/reranker.h>
 
 namespace zvec {
 
-// ==================== RrfReRanker ====================
+// ==================== ScoreBasedReranker ====================
 
-DocPtrList RrfReRanker::rerank(
+DocPtrList ScoreBasedReranker::rerank(
     const std::map<std::string, DocPtrList> &query_results, int topn) const {
-  // doc_id -> cumulative RRF score
-  std::unordered_map<std::string, double> rrf_scores;
-  // doc_id -> first-seen Doc pointer
+  std::unordered_map<std::string, double> scores;
   std::unordered_map<std::string, Doc::Ptr> id_to_doc;
 
   for (const auto &[field_name, docs] : query_results) {
     for (size_t rank = 0; rank < docs.size(); ++rank) {
       const auto &doc = docs[rank];
       const std::string &doc_id = doc->pk();
-      double score = 1.0 / (static_cast<double>(rank_constant_) +
-                            static_cast<double>(rank) + 1.0);
-      rrf_scores[doc_id] += score;
+      scores[doc_id] += rescore(static_cast<double>(doc->score()),
+                                static_cast<int>(rank), field_name);
       if (id_to_doc.find(doc_id) == id_to_doc.end()) {
         id_to_doc[doc_id] = doc;
       }
     }
   }
 
-  // Sort by RRF score descending and take topn using a min-heap
   using ScorePair = std::pair<std::string, double>;
   auto cmp = [](const ScorePair &a, const ScorePair &b) {
-    return a.second > b.second;  // min-heap: top element is smallest
+    return a.second > b.second;
   };
   std::priority_queue<ScorePair, std::vector<ScorePair>, decltype(cmp)> pq(cmp);
 
-  for (const auto &[doc_id, score] : rrf_scores) {
+  for (const auto &[doc_id, score] : scores) {
     if (static_cast<int>(pq.size()) < topn) {
       pq.emplace(doc_id, score);
     } else if (score > pq.top().second) {
@@ -69,18 +66,26 @@ DocPtrList RrfReRanker::rerank(
     results.push_back(std::move(doc));
     pq.pop();
   }
-  // Reverse to get descending order
   std::reverse(results.begin(), results.end());
   return results;
 }
 
-// ==================== WeightedReRanker ====================
+// ==================== RrfReranker ====================
 
-WeightedReRanker::WeightedReRanker(MetricType metric,
-                                   const std::map<std::string, double> &weights)
-    : metric_(metric), weights_(weights) {}
+double RrfReranker::rescore(double /*score*/, int rank,
+                            const std::string & /*field_name*/) const {
+  return 1.0 / (static_cast<double>(rank_constant_) +
+                static_cast<double>(rank) + 1.0);
+}
 
-double WeightedReRanker::normalize_score(double score, MetricType metric) {
+// ==================== WeightedReranker ====================
+
+WeightedReranker::WeightedReranker(
+    const std::map<std::string, MetricType> &metrics,
+    const std::map<std::string, double> &weights)
+    : metrics_(metrics), weights_(weights) {}
+
+double WeightedReranker::normalize_score(double score, MetricType metric) {
   switch (metric) {
     case MetricType::L2:
       return 1.0 - 2.0 * std::atan(score) / M_PI;
@@ -93,58 +98,20 @@ double WeightedReRanker::normalize_score(double score, MetricType metric) {
   }
 }
 
-DocPtrList WeightedReRanker::rerank(
-    const std::map<std::string, DocPtrList> &query_results, int topn) const {
-  // doc_id -> cumulative weighted score
-  std::unordered_map<std::string, double> weighted_scores;
-  // doc_id -> first-seen Doc pointer
-  std::unordered_map<std::string, Doc::Ptr> id_to_doc;
-
-  for (const auto &[vector_name, docs] : query_results) {
-    double weight = 1.0;
-    auto it = weights_.find(vector_name);
-    if (it != weights_.end()) {
-      weight = it->second;
-    }
-    for (const auto &doc : docs) {
-      const std::string &doc_id = doc->pk();
-      double normalized =
-          normalize_score(static_cast<double>(doc->score()), metric_);
-      weighted_scores[doc_id] += normalized * weight;
-      if (id_to_doc.find(doc_id) == id_to_doc.end()) {
-        id_to_doc[doc_id] = doc;
-      }
-    }
+double WeightedReranker::rescore(double score, int /*rank*/,
+                                 const std::string &field_name) const {
+  auto metric_it = metrics_.find(field_name);
+  if (metric_it == metrics_.end()) {
+    throw std::invalid_argument(
+        "WeightedReranker: no metric type specified for field '" + field_name +
+        "'");
   }
-
-  // Sort by weighted score descending and take topn using a min-heap
-  using ScorePair = std::pair<std::string, double>;
-  auto cmp = [](const ScorePair &a, const ScorePair &b) {
-    return a.second > b.second;  // min-heap
-  };
-  std::priority_queue<ScorePair, std::vector<ScorePair>, decltype(cmp)> pq(cmp);
-
-  for (const auto &[doc_id, score] : weighted_scores) {
-    if (static_cast<int>(pq.size()) < topn) {
-      pq.emplace(doc_id, score);
-    } else if (score > pq.top().second) {
-      pq.pop();
-      pq.emplace(doc_id, score);
-    }
+  double weight = 1.0;
+  auto weight_it = weights_.find(field_name);
+  if (weight_it != weights_.end()) {
+    weight = weight_it->second;
   }
-
-  DocPtrList results;
-  results.reserve(pq.size());
-  while (!pq.empty()) {
-    const auto &[doc_id, score] = pq.top();
-    auto doc = std::make_shared<Doc>(*id_to_doc[doc_id]);
-    doc->set_score(static_cast<float>(score));
-    results.push_back(std::move(doc));
-    pq.pop();
-  }
-  // Reverse to get descending order
-  std::reverse(results.begin(), results.end());
-  return results;
+  return normalize_score(score, metric_it->second) * weight;
 }
 
 }  // namespace zvec

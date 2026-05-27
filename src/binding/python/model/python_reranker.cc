@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "python_reranker.h"
+#include <pybind11/functional.h>
 #include <pybind11/stl.h>
 #include <zvec/db/collection.h>
 #include <zvec/db/type.h>
@@ -23,30 +24,40 @@ void ZVecPyReranker::Initialize(py::module_ &m) {
   // Bind Reranker base class (abstract, cannot be instantiated directly)
   py::class_<Reranker, Reranker::Ptr>(m, "_Reranker");
 
-  // Bind RrfReRanker
-  py::class_<RrfReRanker, Reranker, std::shared_ptr<RrfReRanker>>(
-      m, "_RrfReRanker")
+  // Bind ScoreBasedReranker intermediate class
+  py::class_<ScoreBasedReranker, Reranker, std::shared_ptr<ScoreBasedReranker>>(
+      m, "_ScoreBasedReranker");
+
+  // Bind RrfReranker
+  py::class_<RrfReranker, ScoreBasedReranker, std::shared_ptr<RrfReranker>>(
+      m, "_RrfReranker")
       .def(py::init<int>(), py::arg("rank_constant") = 60)
-      .def_property_readonly("rank_constant", &RrfReRanker::rank_constant);
+      .def_property_readonly("rank_constant", &RrfReranker::rank_constant);
 
-  // Bind WeightedReRanker
-  py::class_<WeightedReRanker, Reranker, std::shared_ptr<WeightedReRanker>>(
-      m, "_WeightedReRanker")
-      .def(py::init<MetricType, std::map<std::string, double>>(),
-           py::arg("metric") = MetricType::L2,
+  // Bind WeightedReranker
+  py::class_<WeightedReranker, ScoreBasedReranker,
+             std::shared_ptr<WeightedReranker>>(m, "_WeightedReranker")
+      .def(py::init<std::map<std::string, MetricType>,
+                    std::map<std::string, double>>(),
+           py::arg("metrics") = std::map<std::string, MetricType>{},
            py::arg("weights") = std::map<std::string, double>{})
-      .def_property_readonly("metric", &WeightedReRanker::metric)
-      .def_property_readonly("weights", &WeightedReRanker::weights);
+      .def_property_readonly("metrics", &WeightedReranker::metrics)
+      .def_property_readonly("weights", &WeightedReranker::weights);
 
-  // Bind MultiVectorQuery struct
-  py::class_<MultiVectorQuery>(m, "_MultiVectorQuery")
+  // Bind CallbackReranker
+  py::class_<CallbackReranker, Reranker, std::shared_ptr<CallbackReranker>>(
+      m, "_CallbackReranker")
+      .def(py::init<CallbackReranker::Callback>(), py::arg("callback"));
+
+  // Bind MultiQuery struct
+  py::class_<MultiQuery>(m, "_MultiQuery")
       .def(py::init<>())
-      .def_readwrite("queries", &MultiVectorQuery::queries)
-      .def_readwrite("topk", &MultiVectorQuery::topk)
-      .def_readwrite("filter", &MultiVectorQuery::filter)
-      .def_readwrite("include_vector", &MultiVectorQuery::include_vector)
-      .def_readwrite("output_fields", &MultiVectorQuery::output_fields)
-      .def_readwrite("reranker", &MultiVectorQuery::reranker);
+      .def_readwrite("queries", &MultiQuery::queries)
+      .def_readwrite("topk", &MultiQuery::topk)
+      .def_readwrite("filter", &MultiQuery::filter)
+      .def_readwrite("include_vector", &MultiQuery::include_vector)
+      .def_readwrite("output_fields", &MultiQuery::output_fields)
+      .def_readwrite("reranker", &MultiQuery::reranker);
 }
 
 }  // namespace zvec

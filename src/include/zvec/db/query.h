@@ -16,6 +16,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 #include <zvec/db/doc.h>
 #include <zvec/db/query_params.h>
@@ -56,20 +57,31 @@ struct GroupByVectorQuery {
   QueryParams::Ptr query_params_;
 };
 
-//! Multi-vector query structure for querying multiple vector fields
-//! with optional re-ranking of combined results.
+//! Multi query structure for combining multiple sub-queries
+//! (vector, full-text, etc.) with optional re-ranking of results.
 
-struct SubVectorQuery {
-  int num_candidates_;
-  std::string field_name_;
+struct VectorQueryPayload {
   std::string query_vector_;
-  std::string query_sparse_indices_;
-  std::string query_sparse_values_;
+  std::string sparse_indices_;
+  std::string sparse_values_;
+};
+
+struct FtsQueryPayload {
+  std::string query_string_;
+  std::string match_string_;
+};
+
+using SubQueryPayload = std::variant<VectorQueryPayload, FtsQueryPayload>;
+
+struct SubQuery {
+  std::string field_name_;
+  int num_candidates_{10};
+  SubQueryPayload payload_;
   QueryParams::Ptr query_params_;
 };
 
-struct MultiVectorQuery {
-  std::vector<SubVectorQuery> queries;
+struct MultiQuery {
+  std::vector<SubQuery> queries;
   int topk{10};
   std::string filter;
   bool include_vector{false};
