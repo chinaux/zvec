@@ -16,7 +16,8 @@ from __future__ import annotations
 import heapq
 import math
 from collections import defaultdict
-from typing import Callable, Optional
+from collections.abc import Callable
+from typing import Optional
 
 from _zvec import _CallbackReranker, _RrfReranker, _WeightedReranker
 
@@ -126,7 +127,7 @@ class WeightedReRanker(RerankFunction):
         self,
         topn: int = 10,
         rerank_field: Optional[str] = None,
-        metrics: Optional[dict[str, "MetricType"]] = None,
+        metrics: Optional[dict[str, MetricType]] = None,
         weights: Optional[dict[str, float]] = None,
     ):
         super().__init__(topn=topn, rerank_field=rerank_field)
@@ -140,7 +141,7 @@ class WeightedReRanker(RerankFunction):
         return self._weights
 
     @property
-    def metrics(self) -> dict[str, "MetricType"]:
+    def metrics(self) -> dict[str, MetricType]:
         """dict[str, MetricType]: Per-field metric type mapping."""
         return self._metrics
 
@@ -186,7 +187,7 @@ class WeightedReRanker(RerankFunction):
             results.append(new_doc)
         return results
 
-    def _normalize_score(self, score: float, metric: "MetricType") -> float:
+    def _normalize_score(self, score: float, metric: MetricType) -> float:
         if metric == MetricType.L2:
             return 1.0 - 2 * math.atan(score) / math.pi
         if metric == MetricType.IP:
