@@ -168,6 +168,7 @@ class Collection:
         """
         self._obj.AddColumn(field_schema._get_object(), expression, option)
         self._schema = CollectionSchema._from_core(self._obj.Schema())
+        self._querier._schema = self._schema
 
     def drop_column(self, field_name: str) -> None:
         """Remove a column from the collection.
@@ -177,6 +178,7 @@ class Collection:
         """
         self._obj.DropColumn(field_name)
         self._schema = CollectionSchema._from_core(self._obj.Schema())
+        self._querier._schema = self._schema
 
     def alter_column(
         self,
@@ -224,6 +226,7 @@ class Collection:
             option,
         )
         self._schema = CollectionSchema._from_core(self._obj.Schema())
+        self._querier._schema = self._schema
 
     # ========== Collection DDL Methods ==========
     @overload
