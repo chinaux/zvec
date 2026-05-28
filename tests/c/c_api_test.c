@@ -4127,27 +4127,6 @@ void test_actual_vector_queries(void) {
   TEST_END();
 }
 
-static zvec_doc_t **test_rerank_callback(
-    const zvec_reranker_field_results_t *field_results, size_t field_count,
-    int topn, size_t *result_count, void *user_data) {
-  (void)user_data;
-  // Collect all docs from all fields
-  size_t total = 0;
-  for (size_t i = 0; i < field_count; i++) {
-    total += field_results[i].doc_count;
-  }
-  size_t count = (size_t)topn < total ? (size_t)topn : total;
-  zvec_doc_t **results = (zvec_doc_t **)malloc(count * sizeof(zvec_doc_t *));
-  size_t idx = 0;
-  for (size_t i = 0; i < field_count && idx < count; i++) {
-    for (size_t j = 0; j < field_results[i].doc_count && idx < count; j++) {
-      results[idx++] = field_results[i].docs[j];
-    }
-  }
-  *result_count = idx;
-  return results;
-}
-
 void test_reranker_functions(void) {
   TEST_START();
 
@@ -4167,55 +4146,26 @@ void test_reranker_functions(void) {
     zvec_reranker_destroy(rrf2);
   }
 
-  // Test 3: Create Weighted reranker with schema
-  zvec_collection_schema_t *w_schema =
-      zvec_collection_schema_create("weighted_test");
-  for (int i = 0; i < 2; i++) {
-    const char *name = i == 0 ? "embedding1" : "embedding2";
-    zvec_index_params_t *hnsw = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
-    zvec_index_params_set_metric_type(hnsw, ZVEC_METRIC_TYPE_L2);
-    zvec_index_params_set_hnsw_params(hnsw, 16, 100);
-    zvec_field_schema_t *vec =
-        zvec_field_schema_create(name, ZVEC_DATA_TYPE_VECTOR_FP32, false, 4);
-    zvec_field_schema_set_index_params(vec, hnsw);
-    zvec_collection_schema_add_field(w_schema, vec);
-    zvec_index_params_destroy(hnsw);
-  }
+  // Test 3: Create Weighted reranker
   const char *fields[] = {"embedding1", "embedding2"};
   double weights[] = {0.7, 0.3};
-  zvec_reranker_t *weighted =
-      zvec_reranker_create_weighted(w_schema, fields, weights, 2);
+  zvec_reranker_t *weighted = zvec_reranker_create_weighted(fields, weights, 2);
   TEST_ASSERT(weighted != NULL);
   if (weighted) {
     TEST_ASSERT(zvec_reranker_get_rank_constant(weighted) == -1);
     zvec_reranker_destroy(weighted);
   }
 
-  // Test 4: Create Weighted reranker with empty schema (no fields)
-  zvec_reranker_t *weighted2 =
-      zvec_reranker_create_weighted(w_schema, NULL, NULL, 0);
+  // Test 4: Create Weighted reranker with no fields
+  zvec_reranker_t *weighted2 = zvec_reranker_create_weighted(NULL, NULL, 0);
   TEST_ASSERT(weighted2 != NULL);
   if (weighted2) {
     zvec_reranker_destroy(weighted2);
   }
-  zvec_collection_schema_destroy(w_schema);
 
   // Test 5: NULL reranker operations
   TEST_ASSERT(zvec_reranker_get_rank_constant(NULL) == -1);
   zvec_reranker_destroy(NULL);  // Should not crash
-
-  // Test 6: Create Callback reranker
-  zvec_reranker_t *cb =
-      zvec_reranker_create_callback(test_rerank_callback, NULL);
-  TEST_ASSERT(cb != NULL);
-  if (cb) {
-    TEST_ASSERT(zvec_reranker_get_rank_constant(cb) == -1);
-    zvec_reranker_destroy(cb);
-  }
-
-  // Test 7: NULL callback should fail
-  zvec_reranker_t *cb_null = zvec_reranker_create_callback(NULL, NULL);
-  TEST_ASSERT(cb_null == NULL);
 
   TEST_END();
 }
@@ -4389,8 +4339,7 @@ void test_multi_vector_query_with_weighted_reranker(void) {
 
   const char *fields[] = {"embedding1", "embedding2"};
   double weights[] = {0.7, 0.3};
-  zvec_reranker_t *weighted =
-      zvec_reranker_create_weighted(f.schema, fields, weights, 2);
+  zvec_reranker_t *weighted = zvec_reranker_create_weighted(fields, weights, 2);
   TEST_ASSERT(weighted != NULL);
 
   int count = execute_multi_query_with_reranker(&f, weighted, 3, 3);
@@ -4398,53 +4347,6 @@ void test_multi_vector_query_with_weighted_reranker(void) {
   TEST_ASSERT(count <= 3);
 
   zvec_reranker_destroy(weighted);
-  teardown_multi_query_fixture(&f);
-
-  TEST_END();
-}
-
-static int g_callback_invoked = 0;
-
-static zvec_doc_t **test_multi_query_callback(
-    const zvec_reranker_field_results_t *field_results, size_t field_count,
-    int topn, size_t *result_count, void *user_data) {
-  (void)user_data;
-  g_callback_invoked = 1;
-
-  size_t total = 0;
-  for (size_t i = 0; i < field_count; i++) {
-    total += field_results[i].doc_count;
-  }
-  size_t count = (size_t)topn < total ? (size_t)topn : total;
-  zvec_doc_t **results = (zvec_doc_t **)malloc(count * sizeof(zvec_doc_t *));
-  size_t idx = 0;
-  for (size_t i = 0; i < field_count && idx < count; i++) {
-    for (size_t j = 0; j < field_results[i].doc_count && idx < count; j++) {
-      results[idx++] = field_results[i].docs[j];
-    }
-  }
-  *result_count = idx;
-  return results;
-}
-
-void test_multi_vector_query_with_callback_reranker(void) {
-  TEST_START();
-
-  multi_query_fixture_t f;
-  TEST_ASSERT(
-      setup_multi_query_fixture(&f, "zvec_test_mq_callback", "mq_callback"));
-
-  g_callback_invoked = 0;
-  zvec_reranker_t *cb_reranker =
-      zvec_reranker_create_callback(test_multi_query_callback, NULL);
-  TEST_ASSERT(cb_reranker != NULL);
-
-  int count = execute_multi_query_with_reranker(&f, cb_reranker, 3, 4);
-  TEST_ASSERT(g_callback_invoked == 1);
-  TEST_ASSERT(count > 0);
-  TEST_ASSERT(count <= 3);
-
-  zvec_reranker_destroy(cb_reranker);
   teardown_multi_query_fixture(&f);
 
   TEST_END();
@@ -5774,8 +5676,6 @@ int main(void) {
   test_reranker_functions();
   test_multi_vector_query_with_rrf_reranker();
   test_multi_vector_query_with_weighted_reranker();
-  test_multi_vector_query_with_callback_reranker();
-
   // Performance tests
   // test_performance_benchmarks();
 

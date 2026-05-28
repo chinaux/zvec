@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 #include <map>
 #include <memory>
@@ -34,14 +35,14 @@ Doc::Ptr MakeDoc(const std::string &id, float score) {
   return doc;
 }
 
-CollectionSchema MakeSchema(
+CollectionSchema::Ptr MakeSchema(
     const std::vector<std::pair<std::string, MetricType>> &fields) {
-  CollectionSchema schema("test");
+  auto schema = std::make_shared<CollectionSchema>("test");
   for (const auto &[name, metric] : fields) {
     auto field = std::make_shared<FieldSchema>(
         name, DataType::VECTOR_FP16, /*dimension=*/4, /*nullable=*/false,
         std::make_shared<HnswIndexParams>(metric));
-    schema.add_field(field);
+    schema->add_field(field);
   }
   return schema;
 }
@@ -118,7 +119,8 @@ TEST(RrfRerankerTest, EmptyResults) {
 TEST(WeightedRerankerTest, BasicWeighted) {
   auto schema =
       MakeSchema({{"vec1", MetricType::L2}, {"vec2", MetricType::L2}});
-  WeightedReranker reranker(schema, {{"vec1", 0.7}, {"vec2", 0.3}});
+  WeightedReranker reranker({{"vec1", 0.7}, {"vec2", 0.3}});
+  reranker.bind_schema(schema);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.5f), MakeDoc("b", 0.3f)};
@@ -135,7 +137,8 @@ TEST(WeightedRerankerTest, BasicWeighted) {
 TEST(WeightedRerankerTest, MixedMetrics) {
   auto schema =
       MakeSchema({{"vec1", MetricType::L2}, {"vec2", MetricType::COSINE}});
-  WeightedReranker reranker(schema, {{"vec1", 0.5}, {"vec2", 0.5}});
+  WeightedReranker reranker({{"vec1", 0.5}, {"vec2", 0.5}});
+  reranker.bind_schema(schema);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.5f)};
@@ -157,7 +160,8 @@ TEST(WeightedRerankerTest, MixedMetrics) {
 
 TEST(WeightedRerankerTest, MissingMetricError) {
   auto schema = MakeSchema({{"vec1", MetricType::L2}});
-  WeightedReranker reranker(schema);
+  WeightedReranker reranker;
+  reranker.bind_schema(schema);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.5f)};
@@ -169,7 +173,8 @@ TEST(WeightedRerankerTest, MissingMetricError) {
 
 TEST(WeightedRerankerTest, NormalizeL2) {
   auto schema = MakeSchema({{"vec1", MetricType::L2}});
-  WeightedReranker reranker(schema);
+  WeightedReranker reranker;
+  reranker.bind_schema(schema);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.0f), MakeDoc("b", 1.0f)};
@@ -187,7 +192,8 @@ TEST(WeightedRerankerTest, NormalizeL2) {
 
 TEST(WeightedRerankerTest, NormalizeIP) {
   auto schema = MakeSchema({{"vec1", MetricType::IP}});
-  WeightedReranker reranker(schema);
+  WeightedReranker reranker;
+  reranker.bind_schema(schema);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.0f), MakeDoc("b", 1.0f)};
@@ -204,7 +210,8 @@ TEST(WeightedRerankerTest, NormalizeIP) {
 
 TEST(WeightedRerankerTest, NormalizeCosine) {
   auto schema = MakeSchema({{"vec1", MetricType::COSINE}});
-  WeightedReranker reranker(schema);
+  WeightedReranker reranker;
+  reranker.bind_schema(schema);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.0f), MakeDoc("b", 1.0f),
@@ -222,7 +229,8 @@ TEST(WeightedRerankerTest, NormalizeCosine) {
 
 TEST(WeightedRerankerTest, Topn) {
   auto schema = MakeSchema({{"vec1", MetricType::L2}});
-  WeightedReranker reranker(schema);
+  WeightedReranker reranker;
+  reranker.bind_schema(schema);
 
   std::map<std::string, DocPtrList> query_results;
   query_results["vec1"] = {MakeDoc("a", 0.1f), MakeDoc("b", 0.2f),

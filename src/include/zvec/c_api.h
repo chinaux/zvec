@@ -1749,94 +1749,13 @@ zvec_reranker_create_rrf(int rank_constant);
 
 /**
  * @brief Create a Weighted reranker
- * @param schema Collection schema (used to derive per-field metric types)
  * @param fields Array of field names
  * @param weights Array of weights corresponding to fields
  * @param field_count Number of field/weight entries
  * @return zvec_reranker_t* Pointer to the newly created reranker
  */
 ZVEC_EXPORT zvec_reranker_t *ZVEC_CALL zvec_reranker_create_weighted(
-    const zvec_collection_schema_t *schema, const char **fields,
-    const double *weights, size_t field_count);
-
-/**
- * @brief Per-field query results passed to a callback reranker.
- */
-typedef struct {
-  const char *field_name;
-  zvec_doc_t **docs;
-  size_t doc_count;
-} zvec_reranker_field_results_t;
-
-/**
- * @brief Callback function type for callback-based reranker.
- *
- * The callback **MUST select pointers from the input** field_results->docs
- * arrays and place them into a newly-allocated outer array. **DO NOT** create
- * new docs (e.g. via zvec_doc_create) inside the callback — pointers other
- * than those provided in field_results will leak, since zvec only frees the
- * outer array, not the elements.
- *
- * Memory ownership:
- *   - Outer array (`zvec_doc_t**`): allocated by callback (malloc/calloc),
- *     freed by zvec via free().
- *   - Inner doc pointers (`zvec_doc_t*`): MUST come from
- *     field_results[i].docs. Their lifetime is managed by zvec.
- *
- * @param field_results Per-field query results. Pointers are owned by zvec
- *                      and valid only for the duration of the callback.
- * @param field_count   Number of fields
- * @param topn          Maximum number of documents to return
- * @param result_count  [out] Number of documents in the returned array
- * @param user_data     Opaque user data pointer passed during creation
- * @return Newly-allocated outer array of pointers picked from field_results.
- *         zvec frees the outer array; callers MUST NOT free it manually.
- *
- * Example:
- * @code
- * // A simple callback that picks the first `topn` docs from the first field.
- * // It selects pointers from input field_results (no new docs allocated),
- * // and only allocates the outer pointer array.
- * static zvec_doc_t **my_reranker_cb(
- *     const zvec_reranker_field_results_t *field_results, size_t field_count,
- *     int topn, size_t *result_count, void *user_data) {
- *   (void)user_data;
- *   *result_count = 0;
- *   if (field_count == 0 || topn <= 0) return NULL;
- *
- *   const zvec_reranker_field_results_t *first = &field_results[0];
- *   size_t n = first->doc_count < (size_t)topn ? first->doc_count
- *                                              : (size_t)topn;
- *
- *   // Allocate ONLY the outer array; zvec frees it via free().
- *   zvec_doc_t **out =
- *       (zvec_doc_t **)malloc(sizeof(zvec_doc_t *) * n);
- *   if (!out) return NULL;
- *
- *   // Pick pointers directly from the input — DO NOT zvec_doc_create here.
- *   for (size_t i = 0; i < n; ++i) {
- *     out[i] = first->docs[i];
- *   }
- *   *result_count = n;
- *   return out;
- * }
- *
- * // Register:
- * zvec_reranker_t *r = zvec_reranker_create_callback(my_reranker_cb, NULL);
- * @endcode
- */
-typedef zvec_doc_t **(*zvec_reranker_callback_fn)(
-    const zvec_reranker_field_results_t *field_results, size_t field_count,
-    int topn, size_t *result_count, void *user_data);
-
-/**
- * @brief Create a callback-based reranker
- * @param callback User-provided reranking function
- * @param user_data Opaque pointer passed to the callback
- * @return zvec_reranker_t* Pointer to the newly created reranker
- */
-ZVEC_EXPORT zvec_reranker_t *ZVEC_CALL zvec_reranker_create_callback(
-    zvec_reranker_callback_fn callback, void *user_data);
+    const char **fields, const double *weights, size_t field_count);
 
 /**
  * @brief Destroy reranker

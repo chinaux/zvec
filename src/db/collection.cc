@@ -1678,6 +1678,7 @@ Result<DocPtrList> CollectionImpl::Query(const MultiQuery &query) const {
   }
 
   // Merge and rerank results
+  query.reranker->bind_schema(schema_);
   return query.reranker->rerank(query_results, query.topk);
 }
 

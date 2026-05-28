@@ -86,9 +86,12 @@ Result<double> RrfReranker::rescore(double /*score*/, int rank,
 
 // ==================== WeightedReranker ====================
 
-WeightedReranker::WeightedReranker(const CollectionSchema &schema,
-                                   const std::map<std::string, double> &weights)
-    : schema_(schema), weights_(weights) {}
+WeightedReranker::WeightedReranker(const std::map<std::string, double> &weights)
+    : weights_(weights) {}
+
+void WeightedReranker::bind_schema(CollectionSchema::Ptr schema) {
+  schema_ = std::move(schema);
+}
 
 Result<double> WeightedReranker::normalize_score(double score,
                                                  const FieldSchema &field) {
@@ -115,7 +118,7 @@ Result<double> WeightedReranker::normalize_score(double score,
 
 Result<double> WeightedReranker::rescore(double score, int /*rank*/,
                                          const std::string &field_name) const {
-  const auto *field = schema_.get_vector_field(field_name);
+  const auto *field = schema_->get_vector_field(field_name);
   if (!field) {
     return tl::make_unexpected(Status::InvalidArgument(
         "WeightedReranker: vector field not found: '", field_name + "'"));

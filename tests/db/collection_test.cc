@@ -3893,7 +3893,7 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldWeighted) {
   mvq.topk = 10;
   std::map<std::string, double> weights = {{"dense_fp32", 0.7},
                                            {"sparse_fp32", 0.3}};
-  mvq.reranker = std::make_shared<WeightedReranker>(*schema, weights);
+  mvq.reranker = std::make_shared<WeightedReranker>(weights);
 
   // Query dense_fp32 field
   {

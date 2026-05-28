@@ -5356,13 +5356,9 @@ zvec_reranker_t *zvec_reranker_create_rrf(int rank_constant) {
   return nullptr;
 }
 
-zvec_reranker_t *zvec_reranker_create_weighted(
-    const zvec_collection_schema_t *schema, const char **fields,
-    const double *weights, size_t field_count) {
-  if (!schema) {
-    set_last_error("Schema cannot be null");
-    return nullptr;
-  }
+zvec_reranker_t *zvec_reranker_create_weighted(const char **fields,
+                                               const double *weights,
+                                               size_t field_count) {
   if ((!fields || !weights) && field_count > 0) {
     set_last_error(
         "Fields and weights pointers cannot be null when field_count > 0");
@@ -5371,8 +5367,6 @@ zvec_reranker_t *zvec_reranker_create_weighted(
 
   ZVEC_TRY_RETURN_NULL(
       "Failed to create Weighted Reranker",
-      const auto *cpp_schema =
-          reinterpret_cast<const zvec::CollectionSchema *>(schema);
       std::map<std::string, double> weight_map;
       for (size_t i = 0; i < field_count; ++i) {
         if (!fields[i]) {
@@ -5383,76 +5377,7 @@ zvec_reranker_t *zvec_reranker_create_weighted(
       }
 
       auto *reranker = new zvec::Reranker::Ptr(
-          std::make_shared<zvec::WeightedReranker>(*cpp_schema, weight_map));
-      return reinterpret_cast<zvec_reranker_t *>(reranker);)
-  return nullptr;
-}
-
-zvec_reranker_t *zvec_reranker_create_callback(
-    zvec_reranker_callback_fn callback, void *user_data) {
-  if (!callback) {
-    set_last_error("Callback function cannot be null");
-    return nullptr;
-  }
-
-  ZVEC_TRY_RETURN_NULL(
-      "Failed to create Callback Reranker",
-      auto fn = [callback, user_data](
-                    const std::map<std::string, zvec::DocPtrList> &query_results,
-                    int topn) -> zvec::DocPtrList {
-        // The callback receives raw zvec::Doc* (cast to zvec_doc_t*) so that
-        // the public zvec_doc_get_* C APIs can be used inside the callback
-        // with the same semantics as outside. To keep each shared_ptr alive
-        // while the callback runs, we hold them in a map keyed by the raw
-        // pointer; the same map also serves as a reverse lookup to translate
-        // the callback's selection back into shared_ptrs.
-        std::unordered_map<const zvec::Doc *, zvec::Doc::Ptr> ptr_map;
-        std::vector<zvec_reranker_field_results_t> c_fields;
-        std::vector<std::vector<zvec_doc_t *>> doc_ptrs_storage;
-        c_fields.reserve(query_results.size());
-        doc_ptrs_storage.reserve(query_results.size());
-
-        for (const auto &[field_name, docs] : query_results) {
-          auto &storage = doc_ptrs_storage.emplace_back();
-          storage.reserve(docs.size());
-          for (const auto &doc : docs) {
-            zvec::Doc *raw = doc.get();
-            ptr_map.emplace(raw, doc);
-            storage.push_back(reinterpret_cast<zvec_doc_t *>(raw));
-          }
-          zvec_reranker_field_results_t fr;
-          fr.field_name = field_name.c_str();
-          fr.docs = storage.data();
-          fr.doc_count = storage.size();
-          c_fields.push_back(fr);
-        }
-
-        size_t result_count = 0;
-        zvec_doc_t **results = callback(c_fields.data(), c_fields.size(), topn,
-                                        &result_count, user_data);
-
-        zvec::DocPtrList result_docs;
-        if (results) {
-          if (result_count > 0) {
-            result_docs.reserve(result_count);
-            for (size_t i = 0; i < result_count; ++i) {
-              auto *raw = reinterpret_cast<const zvec::Doc *>(results[i]);
-              auto it = ptr_map.find(raw);
-              if (it != ptr_map.end()) {
-                result_docs.push_back(it->second);
-              }
-              // Pointers not from the input set are silently dropped; the
-              // callback contract forbids creating new Doc objects.
-            }
-          }
-          free(results);
-        }
-
-        return result_docs;
-      };
-
-      auto *reranker = new zvec::Reranker::Ptr(
-          std::make_shared<zvec::CallbackReranker>(fn));
+          std::make_shared<zvec::WeightedReranker>(weight_map));
       return reinterpret_cast<zvec_reranker_t *>(reranker);)
   return nullptr;
 }
