@@ -102,9 +102,9 @@ class WeightedReranker : public ScoreBasedReranker {
                          const std::string &field_name) const override;
 
  private:
-  static Result<double> normalize_score(double score, MetricType metric);
+  static Result<double> normalize_score(double score, const FieldSchema &field);
 
-  std::map<std::string, MetricType> metrics_;
+  CollectionSchema schema_;
   std::map<std::string, double> weights_;
 };
 

@@ -88,19 +88,18 @@ Result<double> RrfReranker::rescore(double /*score*/, int rank,
 
 WeightedReranker::WeightedReranker(const CollectionSchema &schema,
                                    const std::map<std::string, double> &weights)
-    : weights_(weights) {
-  for (const auto &field : schema.vector_fields()) {
-    auto *vip =
-        dynamic_cast<const VectorIndexParams *>(field->index_params().get());
-    if (vip) {
-      metrics_[field->name()] = vip->metric_type();
-    }
-  }
-}
+    : schema_(schema), weights_(weights) {}
 
 Result<double> WeightedReranker::normalize_score(double score,
-                                                 MetricType metric) {
-  switch (metric) {
+                                                 const FieldSchema &field) {
+  auto *vip =
+      dynamic_cast<const VectorIndexParams *>(field.index_params().get());
+  if (!vip) {
+    return tl::make_unexpected(
+        Status::InvalidArgument("WeightedReranker: field '", field.name(),
+                                "' has no vector index params"));
+  }
+  switch (vip->metric_type()) {
     case MetricType::L2:
       return 1.0 - 2.0 * std::atan(score) / M_PI;
     case MetricType::IP:
@@ -108,21 +107,20 @@ Result<double> WeightedReranker::normalize_score(double score,
     case MetricType::COSINE:
       return 1.0 - score / 2.0;
     default:
-      return tl::make_unexpected(
-          Status::InvalidArgument("Unsupported metric type for normalization: ",
-                                  std::to_string(static_cast<int>(metric))));
+      return tl::make_unexpected(Status::InvalidArgument(
+          "Unsupported metric type for normalization: ",
+          std::to_string(static_cast<int>(vip->metric_type()))));
   }
 }
 
 Result<double> WeightedReranker::rescore(double score, int /*rank*/,
                                          const std::string &field_name) const {
-  auto metric_it = metrics_.find(field_name);
-  if (metric_it == metrics_.end()) {
+  const auto *field = schema_.get_vector_field(field_name);
+  if (!field) {
     return tl::make_unexpected(Status::InvalidArgument(
-        "WeightedReranker: no metric type specified for field '",
-        field_name + "'"));
+        "WeightedReranker: vector field not found: '", field_name + "'"));
   }
-  auto normalized = normalize_score(score, metric_it->second);
+  auto normalized = normalize_score(score, *field);
   if (!normalized.has_value()) {
     return tl::make_unexpected(normalized.error());
   }

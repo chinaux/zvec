@@ -1629,11 +1629,11 @@ Result<DocPtrList> CollectionImpl::Query(const MultiQuery &query) const {
 
   for (const auto &sub : query.queries) {
     const auto &target = sub.target_;
-    if (seen_fields.count(target.field_name_)) {
+    auto [_, inserted] = seen_fields.insert(target.field_name_);
+    if (!inserted) {
       return tl::make_unexpected(Status::InvalidArgument(
           "Duplicate field name in multi-vector query: ", target.field_name_));
     }
-    seen_fields.insert(target.field_name_);
     auto *field_schema = schema_->get_vector_field(target.field_name_);
     if (!field_schema) {
       return tl::make_unexpected(Status::InvalidArgument(
