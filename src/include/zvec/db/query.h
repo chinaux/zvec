@@ -60,24 +60,26 @@ struct GroupByVectorQuery {
 //! Multi query structure for combining multiple sub-queries
 //! (vector, full-text, etc.) with optional re-ranking of results.
 
-struct VectorQueryPayload {
+struct VectorClause {
   std::string query_vector_;
   std::string sparse_indices_;
   std::string sparse_values_;
 };
 
-struct FtsQueryPayload {
+struct FtsClause {
   std::string query_string_;
   std::string match_string_;
 };
 
-using SubQueryPayload = std::variant<VectorQueryPayload, FtsQueryPayload>;
+struct QueryTarget {
+  std::string field_name_;
+  std::variant<VectorClause, FtsClause> clause_;
+  QueryParams::Ptr query_params_;
+};
 
 struct SubQuery {
-  std::string field_name_;
+  QueryTarget target_;
   int num_candidates_{10};
-  SubQueryPayload payload_;
-  QueryParams::Ptr query_params_;
 };
 
 struct MultiQuery {

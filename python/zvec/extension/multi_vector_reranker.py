@@ -61,7 +61,7 @@ class RrfReRanker(RerankFunction):
     def rank_constant(self) -> int:
         return self._rank_constant
 
-    def _get_object(self):
+    def _get_object(self, schema=None):  # noqa: ARG002
         """Return the underlying C++ RrfReranker instance."""
         return self._cpp_reranker
 
@@ -133,7 +133,6 @@ class WeightedReRanker(RerankFunction):
         super().__init__(topn=topn, rerank_field=rerank_field)
         self._weights = weights or {}
         self._metrics = metrics or {}
-        self._cpp_reranker = _WeightedReranker(self._metrics, self._weights)
 
     @property
     def weights(self) -> dict[str, float]:
@@ -145,9 +144,11 @@ class WeightedReRanker(RerankFunction):
         """dict[str, MetricType]: Per-field metric type mapping."""
         return self._metrics
 
-    def _get_object(self):
-        """Return the underlying C++ WeightedReranker instance."""
-        return self._cpp_reranker
+    def _get_object(self, schema=None):
+        """Return a C++ WeightedReranker built from the collection schema."""
+        if schema is None:
+            return None
+        return _WeightedReranker(schema._get_object(), self._weights)
 
     def rerank(self, query_results: dict[str, list[Doc]]) -> list[Doc]:
         """Combine scores from multiple vector fields using weighted sum.
@@ -221,7 +222,7 @@ class CallbackReRanker(RerankFunction):
         self._callback = callback
         self._cpp_reranker = _CallbackReranker(callback)
 
-    def _get_object(self):
+    def _get_object(self, schema=None):  # noqa: ARG002
         """Return the underlying C++ CallbackReranker instance."""
         return self._cpp_reranker
 

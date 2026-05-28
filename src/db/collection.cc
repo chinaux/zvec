@@ -15,6 +15,7 @@
 #include <atomic>
 #include <cstdint>
 #include <filesystem>
+#include <future>
 #include <memory>
 #include <mutex>
 #include <set>
@@ -1616,31 +1617,37 @@ Result<DocPtrList> CollectionImpl::Query(const MultiQuery &query) const {
         Status::InvalidArgument("Reranker is required for multi-vector query"));
   }
 
+  auto segments = get_all_segments();
+  if (segments.empty()) {
+    return DocPtrList();
+  }
+
   // Convert SubVectorQuery to VectorQuery and validate
   std::set<std::string> seen_fields;
   std::vector<VectorQuery> converted_queries;
   converted_queries.reserve(query.queries.size());
 
   for (const auto &sub : query.queries) {
-    if (seen_fields.count(sub.field_name_)) {
+    const auto &target = sub.target_;
+    if (seen_fields.count(target.field_name_)) {
       return tl::make_unexpected(Status::InvalidArgument(
-          "Duplicate field name in multi-vector query: ", sub.field_name_));
+          "Duplicate field name in multi-vector query: ", target.field_name_));
     }
-    seen_fields.insert(sub.field_name_);
-    auto *field_schema = schema_->get_vector_field(sub.field_name_);
+    seen_fields.insert(target.field_name_);
+    auto *field_schema = schema_->get_vector_field(target.field_name_);
     if (!field_schema) {
-      return tl::make_unexpected(
-          Status::InvalidArgument("Vector field not found: ", sub.field_name_));
+      return tl::make_unexpected(Status::InvalidArgument(
+          "Vector field not found: ", target.field_name_));
     }
 
     VectorQuery vq;
     vq.topk_ = sub.num_candidates_;
-    vq.field_name_ = sub.field_name_;
-    const auto &vec_payload = std::get<VectorQueryPayload>(sub.payload_);
-    vq.query_vector_ = vec_payload.query_vector_;
-    vq.query_sparse_indices_ = vec_payload.sparse_indices_;
-    vq.query_sparse_values_ = vec_payload.sparse_values_;
-    vq.query_params_ = sub.query_params_;
+    vq.field_name_ = target.field_name_;
+    const auto &vec_clause = std::get<VectorClause>(target.clause_);
+    vq.query_vector_ = vec_clause.query_vector_;
+    vq.query_sparse_indices_ = vec_clause.sparse_indices_;
+    vq.query_sparse_values_ = vec_clause.sparse_values_;
+    vq.query_params_ = target.query_params_;
     vq.filter_ = query.filter;
     vq.include_vector_ = query.include_vector;
     vq.include_doc_id_ = query.include_doc_id_;
@@ -1651,20 +1658,23 @@ Result<DocPtrList> CollectionImpl::Query(const MultiQuery &query) const {
     converted_queries.push_back(std::move(vq));
   }
 
-  auto segments = get_all_segments();
-  if (segments.empty()) {
-    return DocPtrList();
+  // Execute each VectorQuery concurrently and collect results per field
+  std::vector<std::future<Result<DocPtrList>>> futures;
+  futures.reserve(converted_queries.size());
+  for (const auto &vq : converted_queries) {
+    futures.push_back(std::async(std::launch::async, [&]() {
+      auto engine = sqlengine::SQLEngine::create(std::make_shared<Profiler>());
+      return engine->execute(schema_, vq, segments);
+    }));
   }
 
-  // Execute each VectorQuery and collect results per field
   std::map<std::string, DocPtrList> query_results;
-
-  for (const auto &vq : converted_queries) {
-    auto result = sql_engine_->execute(schema_, vq, segments);
+  for (size_t i = 0; i < converted_queries.size(); ++i) {
+    auto result = futures[i].get();
     if (!result.has_value()) {
       return tl::make_unexpected(result.error());
     }
-    query_results[vq.field_name_] = std::move(result.value());
+    query_results[converted_queries[i].field_name_] = std::move(result.value());
   }
 
   // Merge and rerank results

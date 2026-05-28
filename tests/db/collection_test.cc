@@ -3711,20 +3711,20 @@ TEST_F(CollectionTest, Feature_MultiQuery_Validate) {
 
     SubQuery vq1;
     vq1.num_candidates_ = 10;
-    vq1.field_name_ = "dense_fp32";
+    vq1.target_.field_name_ = "dense_fp32";
     auto vector = query_doc.get<std::vector<float>>("dense_fp32");
     ASSERT_TRUE(vector.has_value());
-    std::get<VectorQueryPayload>(vq1.payload_)
+    std::get<VectorClause>(vq1.target_.clause_)
         .query_vector_.assign((char *)vector.value().data(),
                               vector.value().size() * sizeof(float));
     mvq.queries.push_back(vq1);
 
     SubQuery vq2;
     vq2.num_candidates_ = 10;
-    vq2.field_name_ = "dense_fp16";
+    vq2.target_.field_name_ = "dense_fp16";
     auto vector2 = query_doc.get<std::vector<float>>("dense_fp32");
     ASSERT_TRUE(vector2.has_value());
-    std::get<VectorQueryPayload>(vq2.payload_)
+    std::get<VectorClause>(vq2.target_.clause_)
         .query_vector_.assign((char *)vector2.value().data(),
                               vector2.value().size() * sizeof(float));
     mvq.queries.push_back(vq2);
@@ -3742,15 +3742,15 @@ TEST_F(CollectionTest, Feature_MultiQuery_Validate) {
 
     SubQuery vq1;
     vq1.num_candidates_ = 10;
-    vq1.field_name_ = "nonexistent_field";
-    std::get<VectorQueryPayload>(vq1.payload_)
+    vq1.target_.field_name_ = "nonexistent_field";
+    std::get<VectorClause>(vq1.target_.clause_)
         .query_vector_.assign(128 * sizeof(float), '\0');
     mvq.queries.push_back(vq1);
 
     SubQuery vq2;
     vq2.num_candidates_ = 10;
-    vq2.field_name_ = "dense_fp32";
-    std::get<VectorQueryPayload>(vq2.payload_)
+    vq2.target_.field_name_ = "dense_fp32";
+    std::get<VectorClause>(vq2.target_.clause_)
         .query_vector_.assign(128 * sizeof(float), '\0');
     mvq.queries.push_back(vq2);
 
@@ -3767,15 +3767,15 @@ TEST_F(CollectionTest, Feature_MultiQuery_Validate) {
 
     SubQuery vq1;
     vq1.num_candidates_ = 10;
-    vq1.field_name_ = "dense_fp32";
-    std::get<VectorQueryPayload>(vq1.payload_)
+    vq1.target_.field_name_ = "dense_fp32";
+    std::get<VectorClause>(vq1.target_.clause_)
         .query_vector_.assign(128 * sizeof(float), '\0');
     mvq.queries.push_back(vq1);
 
     SubQuery vq2;
     vq2.num_candidates_ = 10;
-    vq2.field_name_ = "dense_fp32";
-    std::get<VectorQueryPayload>(vq2.payload_)
+    vq2.target_.field_name_ = "dense_fp32";
+    std::get<VectorClause>(vq2.target_.clause_)
         .query_vector_.assign(128 * sizeof(float), '\0');
     mvq.queries.push_back(vq2);
 
@@ -3804,10 +3804,10 @@ TEST_F(CollectionTest, Feature_MultiQuery_SingleFieldWithReranker) {
 
   SubQuery vq;
   vq.num_candidates_ = 10;
-  vq.field_name_ = "dense_fp32";
+  vq.target_.field_name_ = "dense_fp32";
   auto vector = query_doc.get<std::vector<float>>("dense_fp32");
   ASSERT_TRUE(vector.has_value());
-  std::get<VectorQueryPayload>(vq.payload_)
+  std::get<VectorClause>(vq.target_.clause_)
       .query_vector_.assign((char *)vector.value().data(),
                             vector.value().size() * sizeof(float));
   mvq.queries.push_back(vq);
@@ -3840,8 +3840,8 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldRRF) {
   {
     SubQuery vq;
     vq.num_candidates_ = 10;
-    vq.field_name_ = "dense_fp32";
-    std::get<VectorQueryPayload>(vq.payload_)
+    vq.target_.field_name_ = "dense_fp32";
+    std::get<VectorClause>(vq.target_.clause_)
         .query_vector_.assign((char *)vector1.value().data(),
                               vector1.value().size() * sizeof(float));
     mvq.queries.push_back(vq);
@@ -3856,11 +3856,11 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldRRF) {
   {
     SubQuery vq;
     vq.num_candidates_ = 10;
-    vq.field_name_ = "sparse_fp32";
-    std::get<VectorQueryPayload>(vq.payload_)
+    vq.target_.field_name_ = "sparse_fp32";
+    std::get<VectorClause>(vq.target_.clause_)
         .sparse_indices_.assign((char *)sparse.value().first.data(),
                                 sparse.value().first.size() * sizeof(uint32_t));
-    std::get<VectorQueryPayload>(vq.payload_)
+    std::get<VectorClause>(vq.target_.clause_)
         .sparse_values_.assign((char *)sparse.value().second.data(),
                                sparse.value().second.size() * sizeof(float));
     mvq.queries.push_back(vq);
@@ -3891,20 +3891,18 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldWeighted) {
 
   MultiQuery mvq;
   mvq.topk = 10;
-  std::map<std::string, MetricType> metrics = {{"dense_fp32", MetricType::IP},
-                                               {"sparse_fp32", MetricType::IP}};
   std::map<std::string, double> weights = {{"dense_fp32", 0.7},
                                            {"sparse_fp32", 0.3}};
-  mvq.reranker = std::make_shared<WeightedReranker>(metrics, weights);
+  mvq.reranker = std::make_shared<WeightedReranker>(*schema, weights);
 
   // Query dense_fp32 field
   {
     SubQuery vq;
     vq.num_candidates_ = 10;
-    vq.field_name_ = "dense_fp32";
+    vq.target_.field_name_ = "dense_fp32";
     auto vector = query_doc.get<std::vector<float>>("dense_fp32");
     ASSERT_TRUE(vector.has_value());
-    std::get<VectorQueryPayload>(vq.payload_)
+    std::get<VectorClause>(vq.target_.clause_)
         .query_vector_.assign((char *)vector.value().data(),
                               vector.value().size() * sizeof(float));
     mvq.queries.push_back(vq);
@@ -3914,15 +3912,15 @@ TEST_F(CollectionTest, Feature_MultiQuery_MultiFieldWeighted) {
   {
     SubQuery vq;
     vq.num_candidates_ = 10;
-    vq.field_name_ = "sparse_fp32";
+    vq.target_.field_name_ = "sparse_fp32";
     auto sparse =
         query_doc.get<std::pair<std::vector<uint32_t>, std::vector<float>>>(
             "sparse_fp32");
     ASSERT_TRUE(sparse.has_value());
-    std::get<VectorQueryPayload>(vq.payload_)
+    std::get<VectorClause>(vq.target_.clause_)
         .sparse_indices_.assign((char *)sparse.value().first.data(),
                                 sparse.value().first.size() * sizeof(uint32_t));
-    std::get<VectorQueryPayload>(vq.payload_)
+    std::get<VectorClause>(vq.target_.clause_)
         .sparse_values_.assign((char *)sparse.value().second.data(),
                                sparse.value().second.size() * sizeof(float));
     mvq.queries.push_back(vq);
@@ -3953,10 +3951,10 @@ TEST_F(CollectionTest, Feature_MultiQuery_WithFilter) {
 
   SubQuery vq1;
   vq1.num_candidates_ = 10;
-  vq1.field_name_ = "dense_fp32";
+  vq1.target_.field_name_ = "dense_fp32";
   auto vector = query_doc.get<std::vector<float>>("dense_fp32");
   ASSERT_TRUE(vector.has_value());
-  std::get<VectorQueryPayload>(vq1.payload_)
+  std::get<VectorClause>(vq1.target_.clause_)
       .query_vector_.assign((char *)vector.value().data(),
                             vector.value().size() * sizeof(float));
   mvq.queries.push_back(vq1);
@@ -3967,11 +3965,11 @@ TEST_F(CollectionTest, Feature_MultiQuery_WithFilter) {
   ASSERT_TRUE(sparse.has_value());
   SubQuery vq2;
   vq2.num_candidates_ = 10;
-  vq2.field_name_ = "sparse_fp32";
-  std::get<VectorQueryPayload>(vq2.payload_)
+  vq2.target_.field_name_ = "sparse_fp32";
+  std::get<VectorClause>(vq2.target_.clause_)
       .sparse_indices_.assign((char *)sparse.value().first.data(),
                               sparse.value().first.size() * sizeof(uint32_t));
-  std::get<VectorQueryPayload>(vq2.payload_)
+  std::get<VectorClause>(vq2.target_.clause_)
       .sparse_values_.assign((char *)sparse.value().second.data(),
                              sparse.value().second.size() * sizeof(float));
   mvq.queries.push_back(vq2);
@@ -4003,10 +4001,10 @@ TEST_F(CollectionTest, Feature_MultiQuery_WithOutputFields) {
 
   SubQuery vq1;
   vq1.num_candidates_ = 10;
-  vq1.field_name_ = "dense_fp32";
+  vq1.target_.field_name_ = "dense_fp32";
   auto vector = query_doc.get<std::vector<float>>("dense_fp32");
   ASSERT_TRUE(vector.has_value());
-  std::get<VectorQueryPayload>(vq1.payload_)
+  std::get<VectorClause>(vq1.target_.clause_)
       .query_vector_.assign((char *)vector.value().data(),
                             vector.value().size() * sizeof(float));
   mvq.queries.push_back(vq1);
@@ -4017,11 +4015,11 @@ TEST_F(CollectionTest, Feature_MultiQuery_WithOutputFields) {
   ASSERT_TRUE(sparse.has_value());
   SubQuery vq2;
   vq2.num_candidates_ = 10;
-  vq2.field_name_ = "sparse_fp32";
-  std::get<VectorQueryPayload>(vq2.payload_)
+  vq2.target_.field_name_ = "sparse_fp32";
+  std::get<VectorClause>(vq2.target_.clause_)
       .sparse_indices_.assign((char *)sparse.value().first.data(),
                               sparse.value().first.size() * sizeof(uint32_t));
-  std::get<VectorQueryPayload>(vq2.payload_)
+  std::get<VectorClause>(vq2.target_.clause_)
       .sparse_values_.assign((char *)sparse.value().second.data(),
                              sparse.value().second.size() * sizeof(float));
   mvq.queries.push_back(vq2);
@@ -4074,10 +4072,10 @@ TEST_F(CollectionTest, Feature_MultiQuery_CallbackReranker) {
   {
     SubQuery vq;
     vq.num_candidates_ = 10;
-    vq.field_name_ = "dense_fp32";
+    vq.target_.field_name_ = "dense_fp32";
     auto vector = query_doc.get<std::vector<float>>("dense_fp32");
     ASSERT_TRUE(vector.has_value());
-    std::get<VectorQueryPayload>(vq.payload_)
+    std::get<VectorClause>(vq.target_.clause_)
         .query_vector_.assign((char *)vector.value().data(),
                               vector.value().size() * sizeof(float));
     mvq.queries.push_back(vq);
@@ -4087,15 +4085,15 @@ TEST_F(CollectionTest, Feature_MultiQuery_CallbackReranker) {
   {
     SubQuery vq;
     vq.num_candidates_ = 10;
-    vq.field_name_ = "sparse_fp32";
+    vq.target_.field_name_ = "sparse_fp32";
     auto sparse =
         query_doc.get<std::pair<std::vector<uint32_t>, std::vector<float>>>(
             "sparse_fp32");
     ASSERT_TRUE(sparse.has_value());
-    std::get<VectorQueryPayload>(vq.payload_)
+    std::get<VectorClause>(vq.target_.clause_)
         .sparse_indices_.assign((char *)sparse.value().first.data(),
                                 sparse.value().first.size() * sizeof(uint32_t));
-    std::get<VectorQueryPayload>(vq.payload_)
+    std::get<VectorClause>(vq.target_.clause_)
         .sparse_values_.assign((char *)sparse.value().second.data(),
                                sparse.value().second.size() * sizeof(float));
     mvq.queries.push_back(vq);

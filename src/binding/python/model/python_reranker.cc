@@ -37,11 +37,9 @@ void ZVecPyReranker::Initialize(py::module_ &m) {
   // Bind WeightedReranker
   py::class_<WeightedReranker, ScoreBasedReranker,
              std::shared_ptr<WeightedReranker>>(m, "_WeightedReranker")
-      .def(py::init<std::map<std::string, MetricType>,
-                    std::map<std::string, double>>(),
-           py::arg("metrics") = std::map<std::string, MetricType>{},
+      .def(py::init<CollectionSchema, std::map<std::string, double>>(),
+           py::arg("schema"),
            py::arg("weights") = std::map<std::string, double>{})
-      .def_property_readonly("metrics", &WeightedReranker::metrics)
       .def_property_readonly("weights", &WeightedReranker::weights);
 
   // Bind CallbackReranker

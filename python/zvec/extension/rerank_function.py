@@ -68,12 +68,16 @@ class RerankFunction(ABC):
         """
         ...
 
-    def _get_object(self):
+    def _get_object(self, schema=None):  # noqa: ARG002
         """Return the underlying C++ Reranker instance, if available.
 
         This is used internally by the query executor to pass the reranker
         to the C++ MultiQuery method. Subclasses that wrap a C++ reranker
         should override this method.
+
+        Args:
+            schema: Python CollectionSchema, passed when the reranker needs
+                schema info (e.g. WeightedReRanker derives metric types).
 
         Returns:
             The C++ Reranker shared pointer, or None if not available.

@@ -13,19 +13,21 @@
 // limitations under the License.
 
 #include <algorithm>
+#include "zvec/db/status.h"
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <queue>
-#include <stdexcept>
 #include <unordered_map>
 #include <utility>
+#include <zvec/ailego/logger/logger.h>
+#include <zvec/db/index_params.h>
 #include <zvec/db/reranker.h>
 
 namespace zvec {
 
 // ==================== ScoreBasedReranker ====================
 
-DocPtrList ScoreBasedReranker::rerank(
+Result<DocPtrList> ScoreBasedReranker::rerank(
     const std::map<std::string, DocPtrList> &query_results, int topn) const {
   std::unordered_map<std::string, double> scores;
   std::unordered_map<std::string, Doc::Ptr> id_to_doc;
@@ -34,8 +36,12 @@ DocPtrList ScoreBasedReranker::rerank(
     for (size_t rank = 0; rank < docs.size(); ++rank) {
       const auto &doc = docs[rank];
       const std::string &doc_id = doc->pk();
-      scores[doc_id] += rescore(static_cast<double>(doc->score()),
-                                static_cast<int>(rank), field_name);
+      auto rs = rescore(static_cast<double>(doc->score()),
+                        static_cast<int>(rank), field_name);
+      if (!rs.has_value()) {
+        return tl::make_unexpected(rs.error());
+      }
+      scores[doc_id] += rs.value();
       if (id_to_doc.find(doc_id) == id_to_doc.end()) {
         id_to_doc[doc_id] = doc;
       }
@@ -61,7 +67,7 @@ DocPtrList ScoreBasedReranker::rerank(
   results.reserve(pq.size());
   while (!pq.empty()) {
     const auto &[doc_id, score] = pq.top();
-    auto doc = std::make_shared<Doc>(*id_to_doc[doc_id]);
+    auto doc = std::move(id_to_doc[doc_id]);
     doc->set_score(static_cast<float>(score));
     results.push_back(std::move(doc));
     pq.pop();
@@ -72,20 +78,28 @@ DocPtrList ScoreBasedReranker::rerank(
 
 // ==================== RrfReranker ====================
 
-double RrfReranker::rescore(double /*score*/, int rank,
-                            const std::string & /*field_name*/) const {
+Result<double> RrfReranker::rescore(double /*score*/, int rank,
+                                    const std::string & /*field_name*/) const {
   return 1.0 / (static_cast<double>(rank_constant_) +
                 static_cast<double>(rank) + 1.0);
 }
 
 // ==================== WeightedReranker ====================
 
-WeightedReranker::WeightedReranker(
-    const std::map<std::string, MetricType> &metrics,
-    const std::map<std::string, double> &weights)
-    : metrics_(metrics), weights_(weights) {}
+WeightedReranker::WeightedReranker(const CollectionSchema &schema,
+                                   const std::map<std::string, double> &weights)
+    : weights_(weights) {
+  for (const auto &field : schema.vector_fields()) {
+    auto *vip =
+        dynamic_cast<const VectorIndexParams *>(field->index_params().get());
+    if (vip) {
+      metrics_[field->name()] = vip->metric_type();
+    }
+  }
+}
 
-double WeightedReranker::normalize_score(double score, MetricType metric) {
+Result<double> WeightedReranker::normalize_score(double score,
+                                                 MetricType metric) {
   switch (metric) {
     case MetricType::L2:
       return 1.0 - 2.0 * std::atan(score) / M_PI;
@@ -94,24 +108,30 @@ double WeightedReranker::normalize_score(double score, MetricType metric) {
     case MetricType::COSINE:
       return 1.0 - score / 2.0;
     default:
-      throw std::invalid_argument("Unsupported metric type for normalization");
+      return tl::make_unexpected(
+          Status::InvalidArgument("Unsupported metric type for normalization: ",
+                                  std::to_string(static_cast<int>(metric))));
   }
 }
 
-double WeightedReranker::rescore(double score, int /*rank*/,
-                                 const std::string &field_name) const {
+Result<double> WeightedReranker::rescore(double score, int /*rank*/,
+                                         const std::string &field_name) const {
   auto metric_it = metrics_.find(field_name);
   if (metric_it == metrics_.end()) {
-    throw std::invalid_argument(
-        "WeightedReranker: no metric type specified for field '" + field_name +
-        "'");
+    return tl::make_unexpected(Status::InvalidArgument(
+        "WeightedReranker: no metric type specified for field '",
+        field_name + "'"));
+  }
+  auto normalized = normalize_score(score, metric_it->second);
+  if (!normalized.has_value()) {
+    return tl::make_unexpected(normalized.error());
   }
   double weight = 1.0;
   auto weight_it = weights_.find(field_name);
   if (weight_it != weights_.end()) {
     weight = weight_it->second;
   }
-  return normalize_score(score, metric_it->second) * weight;
+  return normalized.value() * weight;
 }
 
 }  // namespace zvec

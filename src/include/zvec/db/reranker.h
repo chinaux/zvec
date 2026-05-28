@@ -18,7 +18,9 @@
 #include <memory>
 #include <string>
 #include <zvec/db/doc.h>
+#include <zvec/db/schema.h>
 #include <zvec/db/type.h>
+#include "zvec/db/status.h"
 
 namespace zvec {
 
@@ -35,7 +37,7 @@ class Reranker {
   //!   documents (sorted by relevance).
   //! \param topn Maximum number of documents to return.
   //! \return Re-ranked list of documents (length <= topn), with updated scores.
-  virtual DocPtrList rerank(
+  virtual Result<DocPtrList> rerank(
       const std::map<std::string, DocPtrList> &query_results,
       int topn = 10) const = 0;
 };
@@ -52,11 +54,12 @@ class ScoreBasedReranker : public Reranker {
   //! \param rank The document's position (0-based) in the per-field result
   //! list. \param field_name The name of the vector field this result came
   //! from. \return The score contribution to be accumulated for this document.
-  virtual double rescore(double score, int rank,
-                         const std::string &field_name) const = 0;
+  virtual Result<double> rescore(double score, int rank,
+                                 const std::string &field_name) const = 0;
 
-  DocPtrList rerank(const std::map<std::string, DocPtrList> &query_results,
-                    int topn = 10) const override;
+  Result<DocPtrList> rerank(
+      const std::map<std::string, DocPtrList> &query_results,
+      int topn = 10) const override;
 };
 
 //! Re-ranker using Reciprocal Rank Fusion (RRF) for multi-vector search.
@@ -74,8 +77,8 @@ class RrfReranker : public ScoreBasedReranker {
     return rank_constant_;
   }
 
-  double rescore(double score, int rank,
-                 const std::string &field_name) const override;
+  Result<double> rescore(double score, int rank,
+                         const std::string &field_name) const override;
 
  private:
   int rank_constant_;
@@ -88,23 +91,19 @@ class RrfReranker : public ScoreBasedReranker {
 //! fields. Supported metrics: L2, IP, COSINE.
 class WeightedReranker : public ScoreBasedReranker {
  public:
-  WeightedReranker(const std::map<std::string, MetricType> &metrics = {},
-                   const std::map<std::string, double> &weights = {});
+  explicit WeightedReranker(const CollectionSchema &schema,
+                            const std::map<std::string, double> &weights = {});
 
-  const std::map<std::string, MetricType> &metrics() const {
-    return metrics_;
-  }
   const std::map<std::string, double> &weights() const {
     return weights_;
   }
 
-  double rescore(double score, int rank,
-                 const std::string &field_name) const override;
-
-  //! Normalize a raw distance/similarity score to [0, 1] range
-  static double normalize_score(double score, MetricType metric);
+  Result<double> rescore(double score, int rank,
+                         const std::string &field_name) const override;
 
  private:
+  static Result<double> normalize_score(double score, MetricType metric);
+
   std::map<std::string, MetricType> metrics_;
   std::map<std::string, double> weights_;
 };
@@ -120,8 +119,9 @@ class CallbackReranker : public Reranker {
 
   explicit CallbackReranker(Callback fn) : callback_(std::move(fn)) {}
 
-  DocPtrList rerank(const std::map<std::string, DocPtrList> &query_results,
-                    int topn = 10) const override {
+  Result<DocPtrList> rerank(
+      const std::map<std::string, DocPtrList> &query_results,
+      int topn = 10) const override {
     return callback_(query_results, topn);
   }
 

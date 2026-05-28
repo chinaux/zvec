@@ -27,6 +27,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <zvec/db/collection.h>
 #include <zvec/db/config.h>
@@ -5356,29 +5357,33 @@ zvec_reranker_t *zvec_reranker_create_rrf(int rank_constant) {
 }
 
 zvec_reranker_t *zvec_reranker_create_weighted(
-    const char **fields, const int *metrics, const double *weights,
-    size_t field_count) {
-  if ((!fields || !metrics || !weights) && field_count > 0) {
-    set_last_error("Fields, metrics, and weights pointers cannot be null when "
-                   "field_count > 0");
+    const zvec_collection_schema_t *schema, const char **fields,
+    const double *weights, size_t field_count) {
+  if (!schema) {
+    set_last_error("Schema cannot be null");
+    return nullptr;
+  }
+  if ((!fields || !weights) && field_count > 0) {
+    set_last_error(
+        "Fields and weights pointers cannot be null when field_count > 0");
     return nullptr;
   }
 
   ZVEC_TRY_RETURN_NULL(
       "Failed to create Weighted Reranker",
-      std::map<std::string, zvec::MetricType> metric_map;
+      const auto *cpp_schema =
+          reinterpret_cast<const zvec::CollectionSchema *>(schema);
       std::map<std::string, double> weight_map;
       for (size_t i = 0; i < field_count; ++i) {
         if (!fields[i]) {
           set_last_error("Null field name at index " + std::to_string(i));
           return nullptr;
         }
-        metric_map[fields[i]] = static_cast<zvec::MetricType>(metrics[i]);
         weight_map[fields[i]] = weights[i];
       }
 
       auto *reranker = new zvec::Reranker::Ptr(
-          std::make_shared<zvec::WeightedReranker>(metric_map, weight_map));
+          std::make_shared<zvec::WeightedReranker>(*cpp_schema, weight_map));
       return reinterpret_cast<zvec_reranker_t *>(reranker);)
   return nullptr;
 }
@@ -5395,6 +5400,13 @@ zvec_reranker_t *zvec_reranker_create_callback(
       auto fn = [callback, user_data](
                     const std::map<std::string, zvec::DocPtrList> &query_results,
                     int topn) -> zvec::DocPtrList {
+        // The callback receives raw zvec::Doc* (cast to zvec_doc_t*) so that
+        // the public zvec_doc_get_* C APIs can be used inside the callback
+        // with the same semantics as outside. To keep each shared_ptr alive
+        // while the callback runs, we hold them in a map keyed by the raw
+        // pointer; the same map also serves as a reverse lookup to translate
+        // the callback's selection back into shared_ptrs.
+        std::unordered_map<const zvec::Doc *, zvec::Doc::Ptr> ptr_map;
         std::vector<zvec_reranker_field_results_t> c_fields;
         std::vector<std::vector<zvec_doc_t *>> doc_ptrs_storage;
         c_fields.reserve(query_results.size());
@@ -5404,8 +5416,9 @@ zvec_reranker_t *zvec_reranker_create_callback(
           auto &storage = doc_ptrs_storage.emplace_back();
           storage.reserve(docs.size());
           for (const auto &doc : docs) {
-            storage.push_back(
-                reinterpret_cast<zvec_doc_t *>(new zvec::Doc::Ptr(doc)));
+            zvec::Doc *raw = doc.get();
+            ptr_map.emplace(raw, doc);
+            storage.push_back(reinterpret_cast<zvec_doc_t *>(raw));
           }
           zvec_reranker_field_results_t fr;
           fr.field_name = field_name.c_str();
@@ -5419,20 +5432,20 @@ zvec_reranker_t *zvec_reranker_create_callback(
                                         &result_count, user_data);
 
         zvec::DocPtrList result_docs;
-        if (results && result_count > 0) {
-          result_docs.reserve(result_count);
-          for (size_t i = 0; i < result_count; ++i) {
-            auto *ptr =
-                reinterpret_cast<zvec::Doc::Ptr *>(results[i]);
-            result_docs.push_back(*ptr);
+        if (results) {
+          if (result_count > 0) {
+            result_docs.reserve(result_count);
+            for (size_t i = 0; i < result_count; ++i) {
+              auto *raw = reinterpret_cast<const zvec::Doc *>(results[i]);
+              auto it = ptr_map.find(raw);
+              if (it != ptr_map.end()) {
+                result_docs.push_back(it->second);
+              }
+              // Pointers not from the input set are silently dropped; the
+              // callback contract forbids creating new Doc objects.
+            }
           }
           free(results);
-        }
-
-        for (auto &storage : doc_ptrs_storage) {
-          for (auto *p : storage) {
-            delete reinterpret_cast<zvec::Doc::Ptr *>(p);
-          }
         }
 
         return result_docs;
@@ -5670,7 +5683,7 @@ zvec_error_code_t zvec_sub_query_set_field_name(
     return ZVEC_ERROR_INVALID_ARGUMENT;
   }
   auto *ptr = reinterpret_cast<zvec::SubQuery *>(query);
-  ptr->field_name_ = std::string(field_name);
+  ptr->target_.field_name_ = std::string(field_name);
   return ZVEC_OK;
 }
 
@@ -5678,7 +5691,7 @@ const char *zvec_sub_query_get_field_name(
     const zvec_sub_query_t *query) {
   if (!query) return nullptr;
   auto *ptr = reinterpret_cast<const zvec::SubQuery *>(query);
-  return ptr->field_name_.c_str();
+  return ptr->target_.field_name_.c_str();
 }
 
 zvec_error_code_t zvec_sub_query_set_query_vector(
@@ -5689,7 +5702,7 @@ zvec_error_code_t zvec_sub_query_set_query_vector(
     return ZVEC_ERROR_INVALID_ARGUMENT;
   }
   auto *ptr = reinterpret_cast<zvec::SubQuery *>(query);
-  auto &payload = std::get<zvec::VectorQueryPayload>(ptr->payload_);
+  auto &payload = std::get<zvec::VectorClause>(ptr->target_.clause_);
   payload.query_vector_.assign(static_cast<const char *>(data), size);
   return ZVEC_OK;
 }
@@ -5702,7 +5715,7 @@ zvec_error_code_t zvec_sub_query_set_sparse_indices(
     return ZVEC_ERROR_INVALID_ARGUMENT;
   }
   auto *ptr = reinterpret_cast<zvec::SubQuery *>(query);
-  auto &payload = std::get<zvec::VectorQueryPayload>(ptr->payload_);
+  auto &payload = std::get<zvec::VectorClause>(ptr->target_.clause_);
   payload.sparse_indices_.assign(
       reinterpret_cast<const char *>(indices), count * sizeof(uint32_t));
   return ZVEC_OK;
@@ -5716,7 +5729,7 @@ zvec_error_code_t zvec_sub_query_set_sparse_values(
     return ZVEC_ERROR_INVALID_ARGUMENT;
   }
   auto *ptr = reinterpret_cast<zvec::SubQuery *>(query);
-  auto &payload = std::get<zvec::VectorQueryPayload>(ptr->payload_);
+  auto &payload = std::get<zvec::VectorClause>(ptr->target_.clause_);
   payload.sparse_values_.assign(
       reinterpret_cast<const char *>(values), count * sizeof(float));
   return ZVEC_OK;
@@ -5731,7 +5744,7 @@ zvec_error_code_t zvec_sub_query_set_hnsw_params(
   }
   auto *ptr = reinterpret_cast<zvec::SubQuery *>(query);
   auto *params_ptr = reinterpret_cast<zvec::HnswQueryParams *>(hnsw_params);
-  ptr->query_params_.reset(params_ptr);
+  ptr->target_.query_params_.reset(params_ptr);
   return ZVEC_OK;
 }
 
@@ -5744,7 +5757,7 @@ zvec_error_code_t zvec_sub_query_set_ivf_params(
   }
   auto *ptr = reinterpret_cast<zvec::SubQuery *>(query);
   auto *params_ptr = reinterpret_cast<zvec::IVFQueryParams *>(ivf_params);
-  ptr->query_params_.reset(params_ptr);
+  ptr->target_.query_params_.reset(params_ptr);
   return ZVEC_OK;
 }
 
@@ -5757,7 +5770,7 @@ zvec_error_code_t zvec_sub_query_set_flat_params(
   }
   auto *ptr = reinterpret_cast<zvec::SubQuery *>(query);
   auto *params_ptr = reinterpret_cast<zvec::FlatQueryParams *>(flat_params);
-  ptr->query_params_.reset(params_ptr);
+  ptr->target_.query_params_.reset(params_ptr);
   return ZVEC_OK;
 }
 

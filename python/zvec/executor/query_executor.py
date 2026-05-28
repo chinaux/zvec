@@ -300,7 +300,7 @@ class MultiVectorQueryExecutor(SingleVectorQueryExecutor):
 
         # Fast path: use C++ MultiQuery for multi-vector with C++ reranker
         if len(query_vectors) > 1 and ctx.reranker is not None:
-            cpp_reranker = ctx.reranker._get_object()
+            cpp_reranker = ctx.reranker._get_object(self._schema)
             if cpp_reranker is not None:
                 mvq = _MultiQuery()
                 mvq.queries = [self._to_sub_query(vq) for vq in query_vectors]
