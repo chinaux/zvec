@@ -130,6 +130,7 @@ class Collection:
         """
         self._obj.CreateIndex(field_name, index_param, option)
         self._schema = CollectionSchema._from_core(self._obj.Schema())
+        self._querier._schema = self._schema
 
     def drop_index(self, field_name: str) -> None:
         """Remove the index from a field.
@@ -139,6 +140,7 @@ class Collection:
         """
         self._obj.DropIndex(field_name)
         self._schema = CollectionSchema._from_core(self._obj.Schema())
+        self._querier._schema = self._schema
 
     def optimize(self, option: OptimizeOption = OptimizeOption()) -> None:
         """Optimize the collection (e.g., merge segments, rebuild index).
