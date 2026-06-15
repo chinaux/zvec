@@ -101,15 +101,16 @@ int main(void) {
     goto cleanup_schema;
   }
   zvec_index_params_set_metric_type(diskann_params, ZVEC_METRIC_TYPE_L2);
-  zvec_index_params_set_diskann_params(diskann_params,
-                                       64,   /* max_degree: graph connectivity */
-                                       100,  /* list_size: build-time candidates */
-                                       8);   /* pq_chunk_num: PQ chunks (0=auto) */
+  zvec_index_params_set_diskann_params(
+      diskann_params, 64, /* max_degree: graph connectivity */
+      100,                /* list_size: build-time candidates */
+      8);                 /* pq_chunk_num: PQ chunks (0=auto) */
 
-  printf("  DiskANN index params: max_degree=%d, list_size=%d, pq_chunk_num=%d\n",
-         zvec_index_params_get_diskann_max_degree(diskann_params),
-         zvec_index_params_get_diskann_list_size(diskann_params),
-         zvec_index_params_get_diskann_pq_chunk_num(diskann_params));
+  printf(
+      "  DiskANN index params: max_degree=%d, list_size=%d, pq_chunk_num=%d\n",
+      zvec_index_params_get_diskann_max_degree(diskann_params),
+      zvec_index_params_get_diskann_list_size(diskann_params),
+      zvec_index_params_get_diskann_pq_chunk_num(diskann_params));
 
   zvec_field_schema_t *embedding_field = zvec_field_schema_create(
       "embedding", ZVEC_DATA_TYPE_VECTOR_FP32, false, VECTOR_DIM);
@@ -144,12 +145,12 @@ int main(void) {
   /* ------------------------------------------------------------------
    * Step 3: Generate and insert documents
    * ------------------------------------------------------------------ */
-  printf("\n[Step 3] Inserting %d documents with %dD vectors...\n",
-         NUM_DOCS, VECTOR_DIM);
+  printf("\n[Step 3] Inserting %d documents with %dD vectors...\n", NUM_DOCS,
+         VECTOR_DIM);
 
   /* Allocate vector storage */
-  float (*vectors)[VECTOR_DIM] =
-      (float (*)[VECTOR_DIM])malloc(NUM_DOCS * VECTOR_DIM * sizeof(float));
+  float(*vectors)[VECTOR_DIM] =
+      (float(*)[VECTOR_DIM])malloc(NUM_DOCS * VECTOR_DIM * sizeof(float));
   if (!vectors) {
     fprintf(stderr, "Failed to allocate vector storage\n");
     goto cleanup_collection;
@@ -166,11 +167,9 @@ int main(void) {
   int batch_size = 20;
   size_t total_success = 0, total_error = 0;
 
-  for (int batch_start = 0; batch_start < NUM_DOCS;
-       batch_start += batch_size) {
-    int count = batch_start + batch_size > NUM_DOCS
-                    ? NUM_DOCS - batch_start
-                    : batch_size;
+  for (int batch_start = 0; batch_start < NUM_DOCS; batch_start += batch_size) {
+    int count = batch_start + batch_size > NUM_DOCS ? NUM_DOCS - batch_start
+                                                    : batch_size;
 
     zvec_doc_t **docs =
         (zvec_doc_t **)malloc((size_t)count * sizeof(zvec_doc_t *));
@@ -203,8 +202,7 @@ int main(void) {
     }
     free(docs);
   }
-  printf("  Inserted: %zu succeeded, %zu failed\n", total_success,
-         total_error);
+  printf("  Inserted: %zu succeeded, %zu failed\n", total_success, total_error);
 
   /* ------------------------------------------------------------------
    * Step 4: Flush to trigger index build (PQ training + graph construction)
@@ -231,8 +229,7 @@ int main(void) {
 
   /* Create DiskANN query params — list_size controls the search frontier
    * (beam width). Larger values improve recall at the cost of latency. */
-  zvec_diskann_query_params_t *da_qp =
-      zvec_query_params_diskann_create(200);
+  zvec_diskann_query_params_t *da_qp = zvec_query_params_diskann_create(200);
   if (!da_qp) {
     fprintf(stderr, "Failed to create DiskANN query params\n");
     goto cleanup_vectors;
@@ -260,13 +257,13 @@ int main(void) {
   /* Execute the query */
   zvec_doc_t **results = NULL;
   size_t result_count = 0;
-  error = zvec_collection_query(collection,
-                                (const zvec_vector_query_t *)query,
+  error = zvec_collection_query(collection, (const zvec_vector_query_t *)query,
                                 &results, &result_count);
   if (error != ZVEC_OK) {
     handle_error(error, "executing DiskANN query");
-    printf("  (This is expected on non-Linux platforms — DiskANN requires "
-           "libaio)\n");
+    printf(
+        "  (This is expected on non-Linux platforms — DiskANN requires "
+        "libaio)\n");
   } else {
     printf("  Query returned %zu results:\n", result_count);
     for (size_t r = 0; r < result_count && r < 5; r++) {
@@ -306,12 +303,12 @@ int main(void) {
 
     zvec_doc_t **tune_results = NULL;
     size_t tune_count = 0;
-    error = zvec_collection_query(
-        collection, (const zvec_vector_query_t *)tune_query,
-        &tune_results, &tune_count);
+    error = zvec_collection_query(collection,
+                                  (const zvec_vector_query_t *)tune_query,
+                                  &tune_results, &tune_count);
     if (error == ZVEC_OK) {
-      printf("  list_size=%3d -> %zu results returned\n",
-             list_sizes[li], tune_count);
+      printf("  list_size=%3d -> %zu results returned\n", list_sizes[li],
+             tune_count);
       zvec_docs_free(tune_results, tune_count);
     } else {
       printf("  list_size=%3d -> query failed (expected on non-Linux)\n",
