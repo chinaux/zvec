@@ -3787,7 +3787,6 @@ void test_query_params_functions(void) {
   zvec_query_params_diskann_destroy(diskann_params);
 
 
-
   // Test boundary cases - null pointer handling
   zvec_query_params_hnsw_destroy(NULL);
   zvec_query_params_ivf_destroy(NULL);
@@ -5980,8 +5979,7 @@ void test_diskann_index_params_functions(void) {
   TEST_ASSERT(zvec_index_params_get_diskann_pq_chunk_num(params) == 0);
 
   // Default metric type is L2
-  TEST_ASSERT(zvec_index_params_get_metric_type(params) ==
-              ZVEC_METRIC_TYPE_L2);
+  TEST_ASSERT(zvec_index_params_get_metric_type(params) == ZVEC_METRIC_TYPE_L2);
 
   // Set and verify custom values
   zvec_index_params_set_metric_type(params, ZVEC_METRIC_TYPE_COSINE);
@@ -5996,8 +5994,7 @@ void test_diskann_index_params_functions(void) {
   TEST_ASSERT(zvec_index_params_get_diskann_pq_chunk_num(params) == 8);
 
   // Type-mismatch error path: HNSW params must not accept DiskANN setter
-  zvec_index_params_t *hnsw =
-      zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
+  zvec_index_params_t *hnsw = zvec_index_params_create(ZVEC_INDEX_TYPE_HNSW);
   TEST_ASSERT(hnsw != NULL);
   err = zvec_index_params_set_diskann_params(hnsw, 100, 50, 0);
   TEST_ASSERT(err == ZVEC_ERROR_INVALID_ARGUMENT);
@@ -6092,8 +6089,7 @@ void test_diskann_wiring_on_vector_query(void) {
   TEST_ASSERT(err == ZVEC_OK);
 
   // NULL handling
-  zvec_diskann_query_params_t *dp_null =
-      zvec_query_params_diskann_create(100);
+  zvec_diskann_query_params_t *dp_null = zvec_query_params_diskann_create(100);
   err = zvec_vector_query_set_diskann_params(NULL, dp_null);
   TEST_ASSERT(err == ZVEC_ERROR_INVALID_ARGUMENT);
   zvec_query_params_diskann_destroy(dp_null);
@@ -6104,8 +6100,7 @@ void test_diskann_wiring_on_vector_query(void) {
   zvec_vector_query_destroy(vq);
 
   // Test wiring on zvec_group_by_vector_query_t
-  zvec_group_by_vector_query_t *gbq =
-      zvec_group_by_vector_query_create();
+  zvec_group_by_vector_query_t *gbq = zvec_group_by_vector_query_create();
   TEST_ASSERT(gbq != NULL);
 
   zvec_diskann_query_params_t *dp2 = zvec_query_params_diskann_create(200);

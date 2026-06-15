@@ -1698,17 +1698,15 @@ zvec_query_params_diskann_destroy(zvec_diskann_query_params_t *params);
  * @param list_size Search frontier size
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_query_params_diskann_set_list_size(zvec_diskann_query_params_t *params,
-                                        int list_size);
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_diskann_set_list_size(
+    zvec_diskann_query_params_t *params, int list_size);
 
 /**
  * @brief Get search frontier size
  * @param params DiskANN query parameters pointer
  * @return int Search frontier size
  */
-ZVEC_EXPORT int ZVEC_CALL
-zvec_query_params_diskann_get_list_size(
+ZVEC_EXPORT int ZVEC_CALL zvec_query_params_diskann_get_list_size(
     const zvec_diskann_query_params_t *params);
 
 /**
@@ -1726,8 +1724,7 @@ ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_diskann_set_radius(
  * @return float Search radius
  */
 ZVEC_EXPORT float ZVEC_CALL
-zvec_query_params_diskann_get_radius(
-    const zvec_diskann_query_params_t *params);
+zvec_query_params_diskann_get_radius(const zvec_diskann_query_params_t *params);
 
 /**
  * @brief Set linear search mode (common parameter from QueryParams base)
@@ -1735,8 +1732,7 @@ zvec_query_params_diskann_get_radius(
  * @param is_linear Whether linear search
  * @return zvec_error_code_t Error code
  */
-ZVEC_EXPORT zvec_error_code_t ZVEC_CALL
-zvec_query_params_diskann_set_is_linear(
+ZVEC_EXPORT zvec_error_code_t ZVEC_CALL zvec_query_params_diskann_set_is_linear(
     zvec_diskann_query_params_t *params, bool is_linear);
 
 /**
@@ -1744,8 +1740,7 @@ zvec_query_params_diskann_set_is_linear(
  * @param params DiskANN query parameters pointer
  * @return bool Whether linear search
  */
-ZVEC_EXPORT bool ZVEC_CALL
-zvec_query_params_diskann_get_is_linear(
+ZVEC_EXPORT bool ZVEC_CALL zvec_query_params_diskann_get_is_linear(
     const zvec_diskann_query_params_t *params);
 
 /**
