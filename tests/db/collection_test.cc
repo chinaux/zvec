@@ -23,9 +23,7 @@
 #include <utility>
 #include <vector>
 #include <gtest/gtest.h>
-#if defined(_WIN64) || defined(_WIN32)
-#include <Windows.h>
-#else
+#if !defined(_WIN64) && !defined(_WIN32)
 #include <sys/stat.h>
 #endif
 #include <magic_enum/magic_enum.hpp>
@@ -212,6 +210,14 @@ TEST_F(CollectionTest, Feature_OpenReadOnly_WithReadOnlyLockFile) {
 
 #if defined(_WIN64) || defined(_WIN32)
   // Windows: use SetFileAttributesW to make file read-only
+  // Include Windows.h locally to avoid macro pollution with zvec headers
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <Windows.h>
   std::wstring wlock_path(lock_path.begin(), lock_path.end());
   DWORD orig_attrs = GetFileAttributesW(wlock_path.c_str());
   ASSERT_NE(orig_attrs, INVALID_FILE_ATTRIBUTES);
