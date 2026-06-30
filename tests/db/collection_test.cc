@@ -23,6 +23,11 @@
 #include <utility>
 #include <vector>
 #include <gtest/gtest.h>
+#if defined(_WIN64) || defined(_WIN32)
+#include <Windows.h>
+#else
+#include <sys/stat.h>
+#endif
 #include <magic_enum/magic_enum.hpp>
 #include <zvec/ailego/io/file.h>
 #include <zvec/ailego/logger/logger.h>
@@ -185,6 +190,63 @@ TEST_F(CollectionTest, Feature_CreateAndOpen_General) {
   };
   func(true);
   func(false);
+}
+
+// Test that read-only collection can be opened when LOCK file is read-only
+// This simulates a read-only filesystem scenario (e.g., mount -o ro)
+// See: https://github.com/zvec-ai/zvec-rust/issues/6
+TEST_F(CollectionTest, Feature_OpenReadOnly_WithReadOnlyLockFile) {
+  // Create a collection first
+  auto schema = TestHelper::CreateNormalSchema();
+  auto options = CollectionOptions{false, true, 100 * 1024 * 1024};
+  auto collection =
+      TestHelper::CreateCollectionWithDoc(col_path, *schema, options, 0, 0);
+  ASSERT_NE(collection, nullptr);
+
+  // Close the collection
+  collection.reset();
+
+  // Make the LOCK file read-only to simulate read-only filesystem
+  std::string lock_path = col_path + "/LOCK";
+  ASSERT_TRUE(ailego::FileHelper::IsExist(lock_path.c_str()));
+
+#if defined(_WIN64) || defined(_WIN32)
+  // Windows: use SetFileAttributesW to make file read-only
+  std::wstring wlock_path(lock_path.begin(), lock_path.end());
+  DWORD orig_attrs = GetFileAttributesW(wlock_path.c_str());
+  ASSERT_NE(orig_attrs, INVALID_FILE_ATTRIBUTES);
+  ASSERT_TRUE(SetFileAttributesW(wlock_path.c_str(),
+                                 orig_attrs | FILE_ATTRIBUTE_READONLY));
+#else
+  // POSIX: use chmod to remove write permissions
+  ASSERT_EQ(chmod(lock_path.c_str(), S_IRUSR | S_IRGRP | S_IROTH), 0);
+#endif
+
+  // Open with read_only=true should succeed even with read-only LOCK file
+  CollectionOptions ro_options;
+  ro_options.read_only_ = true;
+  ro_options.enable_mmap_ = true;
+
+  auto result = Collection::Open(col_path, ro_options);
+  if (!result.has_value()) {
+    std::cout << "Open read-only failed: " << result.error().message()
+              << std::endl;
+  }
+  ASSERT_TRUE(result.has_value())
+      << "Failed to open read-only collection with read-only LOCK file";
+
+  auto col = result.value();
+  ASSERT_NE(col, nullptr);
+
+  // Close collection before restoring permissions
+  col.reset();
+
+  // Restore permissions for cleanup
+#if defined(_WIN64) || defined(_WIN32)
+  SetFileAttributesW(wlock_path.c_str(), orig_attrs);
+#else
+  chmod(lock_path.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+#endif
 }
 
 TEST_F(CollectionTest, Feature_CreateAndOpen_Empty) {
