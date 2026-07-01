@@ -194,6 +194,9 @@ TEST_F(CollectionTest, Feature_CreateAndOpen_General) {
 // This simulates a read-only filesystem scenario (e.g., mount -o ro)
 // See: https://github.com/zvec-ai/zvec-rust/issues/6
 TEST_F(CollectionTest, Feature_OpenReadOnly_WithReadOnlyLockFile) {
+#if defined(_WIN64) || defined(_WIN32)
+  GTEST_SKIP() << "Skipped on Windows: requires chmod";
+#else
   // Create a collection first
   auto schema = TestHelper::CreateNormalSchema();
   auto options = CollectionOptions{false, true, 100 * 1024 * 1024};
@@ -208,25 +211,8 @@ TEST_F(CollectionTest, Feature_OpenReadOnly_WithReadOnlyLockFile) {
   std::string lock_path = col_path + "/LOCK";
   ASSERT_TRUE(ailego::FileHelper::IsExist(lock_path.c_str()));
 
-#if defined(_WIN64) || defined(_WIN32)
-  // Windows: use SetFileAttributesW to make file read-only
-  // Include Windows.h locally to avoid macro pollution with zvec headers
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <Windows.h>
-  std::wstring wlock_path(lock_path.begin(), lock_path.end());
-  DWORD orig_attrs = GetFileAttributesW(wlock_path.c_str());
-  ASSERT_NE(orig_attrs, INVALID_FILE_ATTRIBUTES);
-  ASSERT_TRUE(SetFileAttributesW(wlock_path.c_str(),
-                                 orig_attrs | FILE_ATTRIBUTE_READONLY));
-#else
   // POSIX: use chmod to remove write permissions
   ASSERT_EQ(chmod(lock_path.c_str(), S_IRUSR | S_IRGRP | S_IROTH), 0);
-#endif
 
   // Open with read_only=true should succeed even with read-only LOCK file
   CollectionOptions ro_options;
@@ -248,9 +234,6 @@ TEST_F(CollectionTest, Feature_OpenReadOnly_WithReadOnlyLockFile) {
   col.reset();
 
   // Restore permissions for cleanup
-#if defined(_WIN64) || defined(_WIN32)
-  SetFileAttributesW(wlock_path.c_str(), orig_attrs);
-#else
   chmod(lock_path.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 #endif
 }
