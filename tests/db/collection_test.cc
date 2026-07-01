@@ -16,16 +16,15 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 #include <gtest/gtest.h>
-#if !defined(_WIN64) && !defined(_WIN32)
-#include <sys/stat.h>
-#endif
 #include <magic_enum/magic_enum.hpp>
 #include <zvec/ailego/io/file.h>
 #include <zvec/ailego/logger/logger.h>
@@ -194,9 +193,8 @@ TEST_F(CollectionTest, Feature_CreateAndOpen_General) {
 // This simulates a read-only filesystem scenario (e.g., mount -o ro)
 // See: https://github.com/zvec-ai/zvec-rust/issues/6
 TEST_F(CollectionTest, Feature_OpenReadOnly_WithReadOnlyLockFile) {
-#if defined(_WIN64) || defined(_WIN32)
-  GTEST_SKIP() << "Skipped on Windows: requires chmod";
-#else
+  namespace fs = std::filesystem;
+
   // Create a collection first
   auto schema = TestHelper::CreateNormalSchema();
   auto options = CollectionOptions{false, true, 100 * 1024 * 1024};
@@ -211,8 +209,13 @@ TEST_F(CollectionTest, Feature_OpenReadOnly_WithReadOnlyLockFile) {
   std::string lock_path = col_path + "/LOCK";
   ASSERT_TRUE(ailego::FileHelper::IsExist(lock_path.c_str()));
 
-  // POSIX: use chmod to remove write permissions
-  ASSERT_EQ(chmod(lock_path.c_str(), S_IRUSR | S_IRGRP | S_IROTH), 0);
+  // Use std::filesystem to set read-only permissions (cross-platform)
+  std::error_code ec;
+  fs::permissions(lock_path,
+                  fs::perms::owner_read | fs::perms::group_read |
+                      fs::perms::others_read,
+                  fs::perm_options::replace, ec);
+  ASSERT_FALSE(ec) << "Failed to set read-only permissions: " << ec.message();
 
   // Open with read_only=true should succeed even with read-only LOCK file
   CollectionOptions ro_options;
@@ -234,8 +237,10 @@ TEST_F(CollectionTest, Feature_OpenReadOnly_WithReadOnlyLockFile) {
   col.reset();
 
   // Restore permissions for cleanup
-  chmod(lock_path.c_str(), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-#endif
+  fs::permissions(lock_path,
+                  fs::perms::owner_read | fs::perms::owner_write |
+                      fs::perms::group_read | fs::perms::others_read,
+                  fs::perm_options::replace, ec);
 }
 
 TEST_F(CollectionTest, Feature_CreateAndOpen_Empty) {
