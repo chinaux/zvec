@@ -79,9 +79,14 @@ int main(void) {
     return 1;
   }
 
+  /* Index params — declared up-front and NULL-initialized so the
+   * cleanup_schema path never touches an uninitialized pointer even if an
+   * early field addition fails. */
+  zvec_index_params_t *invert_params = NULL;
+  zvec_index_params_t *diskann_params = NULL;
+
   /* Scalar field with inverted index (for primary key / filtering) */
-  zvec_index_params_t *invert_params =
-      zvec_index_params_create(ZVEC_INDEX_TYPE_INVERT);
+  invert_params = zvec_index_params_create(ZVEC_INDEX_TYPE_INVERT);
   zvec_index_params_set_invert_params(invert_params, true, false);
 
   zvec_field_schema_t *id_field =
@@ -94,8 +99,7 @@ int main(void) {
   printf("  + id field (STRING, inverted index)\n");
 
   /* Vector field with DiskANN index */
-  zvec_index_params_t *diskann_params =
-      zvec_index_params_create(ZVEC_INDEX_TYPE_DISKANN);
+  diskann_params = zvec_index_params_create(ZVEC_INDEX_TYPE_DISKANN);
   if (!diskann_params) {
     fprintf(stderr, "Failed to create DiskANN index parameters\n");
     goto cleanup_schema;
