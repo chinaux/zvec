@@ -37,10 +37,10 @@
 > [!IMPORTANT]
 > 🚀  **v0.6.0（2026 年 7 月 20 日）**
 >
-> - **分组检索（Group-By）**：支持按分组去重检索，返回每个分组的 Top-K 结果而非全局 Top-K，覆盖 Flat、HNSW、HNSW-RaBitQ 与稀疏索引，并已在 Python API 中开放。
-> - **随机旋转量化**：为 INT8/INT4 量化新增可选的随机旋转能力，将方差均匀分布到各维度，显著提升召回率（如 HNSW INT4 召回率从 0.21 → 0.71）。
+> - **分组检索（Group-By）**：支持按分组去重检索，返回每个分组的 Top-K 结果而非全局 Top-K，覆盖 Flat、HNSW、HNSW-RaBitQ 与稀疏索引。
+> - **随机旋转量化**：为 INT8/INT4 量化新增可选的随机旋转能力，将方差均匀分布到各维度，显著提升召回率。
 > - **全文检索增强**：升级 FTS 文本分析管线，新增基于 Unicode UAX #29 的标准分词器、UTF-8 / ASCII 折叠，以及基于 Snowball、支持 34+ 种语言的词干提取过滤器。
-> - **更快更稳健**：Block-max 跳跃优化使 FTS 合取查询提速 22–38%，同时新增 DiskANN C API、可插拔的 Turbo Quantizer 抽象层，以及大量稳定性修复。
+> - **更快更稳健**：Block-max 跳跃优化使 FTS 合取查询提速 22–38%，同时新增 DiskANN C API，以及大量稳定性修复。
 >
 > 👉 [查看更新日志](https://github.com/alibaba/zvec/releases/tag/v0.6.0) | [查看路线图 📍](https://github.com/alibaba/zvec/issues/309)
 

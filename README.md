@@ -37,10 +37,10 @@
 > [!Important]
 > 🚀 **v0.6.0 (July 20, 2026)**
 >
-> - **Group-By Search**: Retrieve top-K results per group instead of globally (group-by deduplication) across Flat, HNSW, HNSW-RaBitQ, and sparse indexes — now also exposed in the Python API.
-> - **Random Rotation Quantization**: Optional random rotation for INT8/INT4 quantization distributes variance evenly across dimensions, significantly boosting recall (e.g. HNSW INT4 recall 0.21 → 0.71).
+> - **Group-By Search**: Retrieve top-K results per group instead of globally (group-by deduplication) across Flat, HNSW, HNSW-RaBitQ, and sparse indexes.
+> - **Random Rotation Quantization**: Optional random rotation for INT8/INT4 quantization distributes variance evenly across dimensions, significantly boosting recall.
 > - **Enhanced Full-Text Search**: Upgraded FTS pipeline with a Unicode UAX #29 standard tokenizer, UTF-8 / ASCII folding, and a Snowball-based stemmer supporting 34+ languages.
-> - **Faster & More Robust**: Block-max skip speeds up FTS conjunction queries by 22–38%, plus a new DiskANN C API, a pluggable Turbo Quantizer abstraction, and numerous stability fixes.
+> - **Faster & More Robust**: Block-max skip speeds up FTS conjunction queries by 22–38%, plus a new DiskANN C API and numerous stability fixes.
 >
 > 👉 [Read the Release Notes](https://github.com/alibaba/zvec/releases/tag/v0.6.0) | [View Roadmap 📍](https://github.com/alibaba/zvec/issues/309)
 
