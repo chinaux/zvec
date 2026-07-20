@@ -35,14 +35,14 @@
 **Zvec** is an open-source, in-process vector database — lightweight, lightning-fast, and designed to embed directly into applications. Battle-tested within Alibaba Group, it delivers production-grade, low-latency and scalable similarity search with minimal setup.
 
 > [!Important]
-> 🚀 **v0.5.0 (June 12, 2026)**
+> 🚀 **v0.6.0 (July 20, 2026)**
 >
-> - **Full-Text Search (FTS)**: Native full-text search — attach an FTS index to any string field and query it with natural-language or structured expressions, no external search engine required.
-> - **Hybrid Retrieval**: Combine full-text, dense-vector, and sparse-vector retrieval in a single query call, with scalar filtering and reranking.
-> - **DiskANN Index**: New on-disk index that keeps the bulk of the index on disk, drastically cutting memory usage for large-scale datasets.
-> - **Ecosystem & Platforms**: New official [Go](https://github.com/zvec-ai/zvec-go) / [Rust](https://github.com/zvec-ai/zvec-rust) SDKs, the [Zvec Studio](https://github.com/zvec-ai/zvec-studio) visual tool, and RISC-V support.
+> - **Group-By Search**: Retrieve top-K results per group instead of globally (group-by deduplication) across Flat, HNSW, HNSW-RaBitQ, and sparse indexes — now also exposed in the Python API.
+> - **Random Rotation Quantization**: Optional random rotation for INT8/INT4 quantization distributes variance evenly across dimensions, significantly boosting recall (e.g. HNSW INT4 recall 0.21 → 0.71).
+> - **Enhanced Full-Text Search**: Upgraded FTS pipeline with a Unicode UAX #29 standard tokenizer, UTF-8 / ASCII folding, and a Snowball-based stemmer supporting 34+ languages.
+> - **Faster & More Robust**: Block-max skip speeds up FTS conjunction queries by 22–38%, plus a new DiskANN C API, a pluggable Turbo Quantizer abstraction, and numerous stability fixes.
 >
-> 👉 [Read the Release Notes](https://github.com/alibaba/zvec/releases/tag/v0.5.0) | [View Roadmap 📍](https://github.com/alibaba/zvec/issues/309)
+> 👉 [Read the Release Notes](https://github.com/alibaba/zvec/releases/tag/v0.6.0) | [View Roadmap 📍](https://github.com/alibaba/zvec/issues/309)
 
 ## 💫 Features
 
